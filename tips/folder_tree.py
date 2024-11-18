@@ -1,5 +1,7 @@
 import os
 
+folder_icon = '\U0001F4C1'
+another_f_icon, tm, emoji, earth, smile = '\U0001F5C2', '\u2122', '\u263A', '\U0001F30D', '\U0001F60A'
 
 def list_directory_contents(directory, indent=0, output_file=None):
     try:
@@ -10,7 +12,7 @@ def list_directory_contents(directory, indent=0, output_file=None):
         for item in items:
             path = os.path.join(directory, item)
             # Форматируем строку для вывода
-            line = ' ' * indent + (f'📁 {item}' if os.path.isdir(path) else f'📄 {item}')
+            line = ' ' * indent + (f'📁  {item}' if os.path.isdir(path) else f'📄 {item}')
 
             # Выводим на экран
             print(line)
@@ -32,7 +34,7 @@ def list_directory_contents(directory, indent=0, output_file=None):
 
 
 # Укажите путь к нужной директории
-directory_path = '/home/uservm/PycharmProjects/python_advanced_diploma/folder_app'  # Замените на ваш путь
+directory_path = '/z_folder_app'  # Замените на ваш путь
 
 # Открываем файл для записи
 try:
@@ -42,3 +44,9 @@ except IOError as e:
     print(f"Ошибка записи в файл: {e}")
 finally:
     print("Завершение работы программы.")
+
+# if __name__ == "__main__":
+#     print(folder_icon, another_f_icon, tm, emoji, earth, smile)
+#     print(f'\U0001f680 kgnbn')
+#     print(" 😀")
+#     print(u"\U0001F600")

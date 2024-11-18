@@ -1,16 +1,17 @@
-📁 application
-    📄 app.py
-    📁 static
-        📁 css
+📁  application
+    📄 app_fastAPI.py
+    📄 app_flask.py
+    📁  static
+        📁  css
             📄 app.45d81840.css
             📄 chunk-0420bcc4.d6bc3184.css
             📄 chunk-10e0d5b4.130d80ef.css
             📄 chunk-6f77c742.8d9a3d9c.css
             📄 chunk-732a3e8c.6334cd6b.css
             📄 chunk-vendors.de691de6.css
-        📁 images
+        📁  images
             📄 favicon.ico
-        📁 js
+        📁  js
             📄 app.ee2cdef2.js
             📄 app.ee2cdef2.js.map
             📄 chunk-0420bcc4.11441662.js
@@ -25,6 +26,7 @@
             📄 chunk-76301fe8.cc56c3b1.js.map
             📄 chunk-vendors.398321e0.js
             📄 chunk-vendors.398321e0.js.map
-    📁 templates
+    📁  templates
         📄 index.html
+        📄 index_fastAPI.html
         📄 new_index.html
