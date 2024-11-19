@@ -24,6 +24,7 @@ services:
     restart: always
   db:
     image: postgres:latest
+    container_name: postgres_container
     environment:
       - POSTGRES_DB=twitter
       - POSTGRES_USER=admin
