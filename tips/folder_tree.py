@@ -34,11 +34,11 @@ def list_directory_contents(directory, indent=0, output_file=None):
 
 
 # Укажите путь к нужной директории
-directory_path = '/z_folder_app'  # Замените на ваш путь
+directory_path = '/home/uservm/PycharmProjects/python_advanced_diploma/project'  # Замените на ваш путь
 
 # Открываем файл для записи
 try:
-    with open('directory_contents.txt', 'w', encoding='utf-8') as file:
+    with open('tips/directory_contents.txt', 'w', encoding='utf-8') as file:
         list_directory_contents(directory_path, output_file=file)
 except IOError as e:
     print(f"Ошибка записи в файл: {e}")
