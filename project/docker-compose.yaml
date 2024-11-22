@@ -12,6 +12,9 @@ services:
     restart: always
     networks:
       - my_network
+    volumes:
+      - static_data:/app/static
+      - templates_data:/app/templates
   server:
     build:
       context: .
@@ -22,13 +25,11 @@ services:
       db:
         condition: service_healthy
     restart: always
-    healthcheck:
-      test: [ "CMD-SHELL", "curl --fail http://localhost:5000/ || exit 1" ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
     networks:
       - my_network
+    volumes:
+      - static_data:/app/static
+      - templates_data:/app/templates
   db:
     image: postgres:latest
     container_name: postgres_container
@@ -53,3 +54,6 @@ services:
 networks:
   my_network:
     driver: bridge
+volumes:
+  static_data:
+  templates_data:
