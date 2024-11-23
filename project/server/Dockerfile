@@ -5,6 +5,6 @@ RUN apt-get update && apt-get install -y python3-dev && rm -rf /var/lib/apt/list
 COPY /server /server
 RUN pip install -r /server/requirements.txt
 
-WORKDIR /server/app
+WORKDIR /server/application
 
 CMD ["uvicorn", "main:app_proj", "--host", "0.0.0.0", "--port", "5000", "--reload"]

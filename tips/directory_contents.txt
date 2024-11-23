@@ -26,6 +26,7 @@
             📄 chunk-76301fe8.cc56c3b1.js.map
             📄 chunk-vendors.398321e0.js
             📄 chunk-vendors.398321e0.js.map
+            📄 formatted_app.ee2cdef2.js
     📁  templates
         📄 index_fastAPI.html
 📁  db
@@ -33,7 +34,8 @@
 📁  init_db.sh
 📁  server
     📄 Dockerfile
-    📁  app
+    📄 __init__.py
+    📁  application
         📁  .mypy_cache
             📄 .gitignore
             📁  3.12
@@ -605,12 +607,15 @@
                     📄 _path.data.json
                     📄 _path.meta.json
             📄 CACHEDIR.TAG
+        📄 __init__.py
         📁  __pycache__
             📄 database.cpython-312.pyc
             📄 main.cpython-312.pyc
             📄 models.cpython-312.pyc
             📄 schemas.cpython-312.pyc
         📁  api
+            📄 __init__.py
+            📄 can_import.py
             📄 depencies.py
             📄 endpoints.py
         📄 crud.py
