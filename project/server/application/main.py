@@ -8,7 +8,7 @@ from starlette.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from database import AsyncSessionApp, proj_engine
-from models import BaseProj, Users
+from models import BaseProj
 # from api.depencies import get_current_session
 from api.endpoints import main_router
 # from schemas import UserOut, UserIn

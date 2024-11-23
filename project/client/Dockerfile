@@ -7,3 +7,5 @@ COPY /client/static /app/static
 COPY /client/templates /app/templates
 
 COPY /client/nginx.conf /etc/nginx/nginx.conf
+
+# http://localhost:8080

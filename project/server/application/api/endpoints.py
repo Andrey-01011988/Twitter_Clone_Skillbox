@@ -2,9 +2,9 @@ from typing import List, Sequence, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 
-from depencies import get_current_session, UserDAO, TweetDAO
-from application.models import Users
-from application.schemas import UserOut, TweetIn
+from api.depencies import get_current_session, UserDAO, TweetDAO
+from models import Users
+from schemas import UserOut, TweetIn
 
 main_router = APIRouter(prefix="/api", tags=["API"], dependencies=[Depends(get_current_session)])
 

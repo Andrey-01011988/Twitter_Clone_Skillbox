@@ -1,6 +1,6 @@
-from application.crud import BaseDAO
-from application.database import AsyncSessionApp
-from application.models import Users, Tweets
+from crud import BaseDAO
+from database import AsyncSessionApp
+from models import Users, Tweets
 
 
 # Назначение текущей сессии

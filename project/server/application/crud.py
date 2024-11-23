@@ -1,11 +1,16 @@
+from typing import TypeVar, Generic
+
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
 from database import AsyncSessionApp
 
 
-class BaseDAO:
-    model = None
+T = TypeVar('T')
+
+
+class BaseDAO(Generic[T]):
+    model: T = None
 
     @classmethod
     async def find_one_or_none_by_id(cls, data_id: int):
