@@ -1,3 +1,5 @@
+from typing import Optional, List
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -20,7 +22,7 @@ class UserOut(BaseUser):
 
 
 class TweetIn(BaseTweet):
-    author_id: int
+    tweet_media_ids: Optional[List[int]] = []
 
 
 class TweetOut(BaseTweet):

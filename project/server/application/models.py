@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import List, Dict, Any
 
-from sqlalchemy import Integer, ForeignKey, String
+from sqlalchemy import Integer, ForeignKey, String, DateTime, func
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -83,7 +83,8 @@ class Tweets(BaseProj):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     text: Mapped[str] = mapped_column(String)
-    timestamp: Mapped[datetime] = mapped_column(default=datetime.now(timezone.utc))
+    # timestamp: Mapped[datetime] = mapped_column(default=datetime.now(timezone.utc))
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     author_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
