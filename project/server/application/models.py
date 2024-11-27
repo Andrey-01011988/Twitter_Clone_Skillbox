@@ -57,11 +57,22 @@ class Users(BaseProj):
         backref="following",
     )
 
+    @property
+    def following(self):
+        return [{"id": followed.id, "name": followed.name} for followed in self.followers]
+
     def __repr__(self):
         return f"Пользователь: {self.name}, id: {self.id}"
 
+    # def to_json(self) -> Dict[str, Any]:
+    #     return {c.name: getattr(self, c.name) for c in self.__table__.columns}
     def to_json(self) -> Dict[str, Any]:
-        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        return {
+            "id": self.id,
+            "name": self.name,
+            "followers": [{"id": follower.id, "name": follower.name} for follower in self.followers] if self.followers else [],
+            "following": self.following if self.following else []
+        }
 
 
 class Tweets(BaseProj):
@@ -101,7 +112,17 @@ class Tweets(BaseProj):
         return f"Твит: {self.text}, создан: {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}, Пользователем: {self.author.name}"
 
     def to_json(self) -> Dict[str, Any]:
-        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        return {
+            "id": self.id,
+            "content": self.text,
+            "timestamp": self.timestamp.isoformat(), # Перевод значения datetime в строковое
+            "author": {
+                "id": self.author.id,
+                "name": self.author.name,
+            },
+            "attachments": [media.url for media in self.media] if self.media else [],  # предполагается наличие поля url в модели Media
+            "likes": [{"user_id": like.user_id, "name": like.user.name} for like in self.likes] if self.likes else [],
+        }
 
 
 class Like(BaseProj):

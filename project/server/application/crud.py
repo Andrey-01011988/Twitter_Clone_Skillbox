@@ -13,7 +13,7 @@ class BaseDAO(Generic[T]):
     model: T = None
 
     @classmethod
-    async def find_one_or_none_by_id(cls, data_id: int):
+    async def find_one_or_none_by_id(cls, data_id: int, options=None):
         """
         Асинхронно находит и возвращает один экземпляр модели по указанным критериям или None.
 
@@ -25,11 +25,13 @@ class BaseDAO(Generic[T]):
         """
         async with AsyncSessionApp() as session:
             query = select(cls.model).filter_by(id=data_id)
+            if options:
+                query = query.options(*options)  # Применяем опции к запросу
             result = await session.execute(query)
             return result.scalar_one_or_none()
 
     @classmethod
-    async def find_one_or_none(cls, **filter_by):
+    async def find_one_or_none(cls, options=None, **filter_by):
         """
         Асинхронно находит и возвращает один экземпляр модели по указанным критериям или None.
 
@@ -41,11 +43,13 @@ class BaseDAO(Generic[T]):
         """
         async with AsyncSessionApp() as session:
             query = select(cls.model).filter_by(**filter_by)
+            if options:
+                query = query.options(*options)  # Применяем опции к запросу
             result = await session.execute(query)
             return result.scalar_one_or_none()
 
     @classmethod
-    async def find_all(cls, **filter_by):
+    async def find_all(cls, options=None, **filter_by):
         """
         Асинхронно находит и возвращает все экземпляры модели, удовлетворяющие указанным критериям.
 
@@ -57,6 +61,8 @@ class BaseDAO(Generic[T]):
         """
         async with AsyncSessionApp() as session:
             query = select(cls.model).filter_by(**filter_by)
+            if options:
+                query = query.options(*options)  # Применяем опции к запросу
             result = await session.execute(query)
             return result.scalars().all()
 
