@@ -1,9 +1,9 @@
 from datetime import datetime
 from typing import List, Sequence, Optional, Dict, Union, Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, UploadFile, File
 
-from api.depencies import get_current_session, UserDAO, TweetDAO
+from api.depencies import get_current_session, UserDAO, TweetDAO, MediaDAO, get_client_token
 from models import Users, Tweets, Like
 from schemas import UserOut, TweetIn, TweetOut, ErrorResponse, SimpleUserOut
 from sqlalchemy.exc import SQLAlchemyError
@@ -29,7 +29,7 @@ async def get_all_users() -> Sequence[Users]:
 
 @main_router.get("/tweets", response_model=Dict[str, Union[bool, List[TweetOut]]],
          responses={403: {"model": ErrorResponse}, 500: {"model": ErrorResponse}})
-async def get_users_tweets(api_key: str = Header(...)) -> JSONResponse | dict[str, bool | list[Any]] | Any:
+async def get_users_tweets(api_key: str = Depends(get_client_token)) -> JSONResponse | dict[str, bool | list[Any]] | Any:
     """
     Получение ленты твитов для пользователя.
 
@@ -46,17 +46,6 @@ async def get_users_tweets(api_key: str = Header(...)) -> JSONResponse | dict[st
     # Проверяем наличие пользователя по переданному API ключу
     user = await UserDAO.find_one_or_none(api_key=api_key)
 
-    # Если пользователь не найден, возвращаем ошибку 403
-    if user is None:
-        return JSONResponse(
-            content={
-                "result": False,
-                "error_type": "Unauthorized",
-                "error_message": "Доступ запрещен: неверный API ключ"
-            },
-            status_code=403  # Устанавливаем статус 403 для несанкционированного доступа
-        )
-
     try:
         # Получаем все твиты пользователя с подгрузкой связанных данных (автор, медиа и лайки)
         all_tweets = await TweetDAO.find_all(options=[
@@ -70,14 +59,7 @@ async def get_users_tweets(api_key: str = Header(...)) -> JSONResponse | dict[st
         tweets_json = [tweet.to_json() for tweet in all_tweets]
     except Exception as e:
         # # Обработка любых других ошибок (например, ошибки базы данных)
-        return JSONResponse(
-            content={
-                "result": False,
-                "error_type": "Internal Server Error",
-                "error_message": str(e)  # Возвращаем текст ошибки для отладки
-            },
-            status_code=500  ## Устанавливаем статус 500 для внутренних ошибок сервера
-        )
+        raise HTTPException(status_code=500, detail=str(e))
 
     # Возвращаем успешный ответ с результатами
     return {
@@ -88,7 +70,7 @@ async def get_users_tweets(api_key: str = Header(...)) -> JSONResponse | dict[st
 
 @main_router.get("/users/me", response_model=Dict[str, Union[bool, UserOut]],
                  responses={403: {"model": ErrorResponse}, 500: {"model": ErrorResponse}})
-async def get_user_info(api_key: str = Header(...)) -> JSONResponse | dict[str, bool | list[Any]] | Any:
+async def get_user_info(api_key: str = Depends(get_client_token)) -> JSONResponse | dict[str, bool | list[Any]] | Any:
     """
     Пользователь получает информацию о своем профиле.
     :param api_key:
@@ -102,17 +84,6 @@ async def get_user_info(api_key: str = Header(...)) -> JSONResponse | dict[str, 
         api_key=api_key
     )
 
-    print(cur_user)
-
-    if cur_user is None:
-        return JSONResponse(
-            content={
-                "result": False,
-                "error_type": "Unauthorized",
-                "error_message": "Доступ запрещен: неверный API ключ"
-            },
-            status_code=403  # Устанавливаем статус 403 для несанкционированного доступа
-        )
 
     return {
         "result": True,
@@ -122,7 +93,7 @@ async def get_user_info(api_key: str = Header(...)) -> JSONResponse | dict[str, 
 
 # @main_router.post("/tweets", response_model=TweetIn, status_code=201)
 @main_router.post("/tweets", status_code=201)
-async def  add_tweet(tweet: TweetIn, api_key: str = Header(...) ) -> dict:
+async def  add_tweet(tweet: TweetIn, api_key: str = Depends(get_client_token)) -> dict:
     """
     Добавляет новый твит от пользователя
     curl -iX POST "http://localhost:5000/api/tweets" -H "api-key: 1wc65vc4v1fv" -H "Content-Type: application/json" -d '{"tweet_media_ids": [], "text": "Привет"}'
@@ -131,8 +102,6 @@ async def  add_tweet(tweet: TweetIn, api_key: str = Header(...) ) -> dict:
     :return: Результат операции и идентификатор нового твита
     """
     user = await UserDAO.find_one_or_none(api_key=api_key)
-    if user is None:
-        raise HTTPException(status_code=403, detail="Доступ запрещен: неверный API ключ")
 
     new_tweet_data ={
         "author_id": user.id,
@@ -144,3 +113,46 @@ async def  add_tweet(tweet: TweetIn, api_key: str = Header(...) ) -> dict:
         return {"result": True, "tweet_id": new_tweet.id}
     except SQLAlchemyError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@main_router.post("/medias")
+async def add_media(api_key: str = Header(...) ):
+    """
+    Endpoint для загрузки файлов из твита.
+    :return:
+    """
+
+
+@main_router.post("/medias")
+async def add_media(api_key: str = Depends(get_client_token), file: UploadFile = File(...), tweet_id: int = None):
+    """
+    Endpoint для загрузки медиафайлов.
+    :param api_key: API ключ пользователя
+    :param file: Загружаемый файл
+    :param tweet_id: ID твита, к которому будет привязано медиа
+    :return: ID загруженного медиафайла
+
+    curl -i -X POST -H "api-key: 1wc65vc4v1fv" -F "file=/home/uservm/PycharmProjects/python_advanced_diploma/cats_1179x2556.jpg" "http://localhost:5000/api/medias?tweet_id=3"
+    """
+    # Проверяем наличие твита, если tweet_id передан
+    if tweet_id is not None:
+        tweet = await TweetDAO.find_one_or_none_by_id(tweet_id)
+        if tweet is None:
+            raise HTTPException(status_code=404, detail="Твит не найден")
+
+    # Сохранение файла на сервере
+    try:
+        file_location = f"static/media/{file.filename}"  # Путь для сохранения файла
+        with open(file_location, "wb") as buffer:
+            buffer.write(await file.read())
+
+        # Создание записи в базе данных
+        new_media = await MediaDAO.add(url=file_location,
+                                       tweet_id=tweet_id)  # Здесь можно указать tweet_id если он известен
+
+        return {"result": True, "media_id": new_media.id}
+
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Ошибка при загрузке файла")

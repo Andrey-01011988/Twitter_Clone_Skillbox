@@ -1,11 +1,12 @@
 from contextlib import asynccontextmanager
 # from typing import List, Sequence
 
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, HTTPException, Request
 # from sqlalchemy import select
 # from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 
 from database import AsyncSessionApp, proj_engine
 from models import BaseProj
@@ -26,6 +27,30 @@ async def lifespan(app: FastAPI):
 app_proj = FastAPI(lifespan=lifespan)
 
 app_proj.include_router(main_router)
+
+
+@app_proj.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "result": False,
+            "error_type": exc.detail if isinstance(exc.detail, str) else "Unknown Error",
+            "error_message": exc.detail if isinstance(exc.detail, str) else str(exc.detail),
+        },
+    )
+
+
+@app_proj.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "result": False,
+            "error_type": "Internal Server Error",
+            "error_message": str(exc),
+        },
+    )
 
 
 # Назначение текущей сессии
