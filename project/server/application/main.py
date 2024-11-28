@@ -35,15 +35,13 @@ app_proj.include_router(main_router)
 #         yield current_session
 #     finally:
 #         await current_session.close()
-
+app_proj.mount("/static", StaticFiles(directory="/app/static"), name="static")
+app_proj.mount("/js", StaticFiles(directory="/app/static/js"), name="js")
+app_proj.mount("/css", StaticFiles(directory="/app/static/css"), name="css")
 
 @app_proj.get("/index")
 def read_main():
     return FileResponse("/app/templates/index_fastAPI.html")
-
-app_proj.mount("/static", StaticFiles(directory="/app/static"), name="static")
-app_proj.mount("/js", StaticFiles(directory="/app/static/js"), name="js")
-app_proj.mount("/css", StaticFiles(directory="/app/static/css"), name="css")
 
 
 @app_proj.get("/welcome")
