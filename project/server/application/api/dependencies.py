@@ -33,5 +33,22 @@ class UserDAO(BaseDAO):
 class TweetDAO(BaseDAO):
     model = Tweets
 
+    @classmethod
+    async def delete_tweet(cls, tweet_id: int, user_id: int):
+        """
+        Удаляет твит, если он принадлежит указанному пользователю.
+
+        :param tweet_id: Идентификатор твита
+        :param user_id: Идентификатор пользователя
+        :return: True, если твит был удален, иначе False
+        """
+        async with AsyncSessionApp() as session:
+            async with session.begin():
+                tweet = await cls.find_one_or_none_by_id(tweet_id)
+                if tweet and tweet.author_id == user_id:
+                    await session.delete(tweet)
+                    return True
+                return False
+
 class MediaDAO(BaseDAO):
     model = Media

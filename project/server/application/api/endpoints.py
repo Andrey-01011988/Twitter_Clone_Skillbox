@@ -3,7 +3,7 @@ from typing import List, Sequence, Optional, Dict, Union, Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, UploadFile, File
 
-from api.depencies import get_current_session, UserDAO, TweetDAO, MediaDAO, get_client_token
+from api.dependencies import get_current_session, UserDAO, TweetDAO, MediaDAO, get_client_token
 from models import Users, Tweets, Like
 from schemas import UserOut, TweetIn, TweetOut, ErrorResponse, SimpleUserOut
 from sqlalchemy.exc import SQLAlchemyError
@@ -116,14 +116,6 @@ async def  add_tweet(tweet: TweetIn, api_key: str = Depends(get_client_token)) -
 
 
 @main_router.post("/medias")
-async def add_media(api_key: str = Header(...) ):
-    """
-    Endpoint для загрузки файлов из твита.
-    :return:
-    """
-
-
-@main_router.post("/medias")
 async def add_media(api_key: str = Depends(get_client_token), file: UploadFile = File(...), tweet_id: int = None):
     """
     Endpoint для загрузки медиафайлов.
@@ -156,3 +148,23 @@ async def add_media(api_key: str = Depends(get_client_token), file: UploadFile =
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail="Ошибка при загрузке файла")
+
+
+@main_router.delete("/tweets/{tweet_id}")
+async def delete_tweet(tweet_id: int, api_key: str = Depends(get_client_token)) -> dict:
+    """
+    Пользователь удаляет именно свой собственный твит.
+
+    :param tweet_id: Идентификатор твита для удаления.
+    :param api_key: API ключ пользователя.
+    :return: Статус операции.
+    """
+    cur_user = await UserDAO.find_one_or_none(api_key=api_key)
+
+    # Пытаемся удалить твит через TweetDAO
+    result = await TweetDAO.delete_tweet(tweet_id=tweet_id, user_id=cur_user.id)
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Твит не найден или вы не имеете прав на его удаление")
+
+    return {"result": True}
