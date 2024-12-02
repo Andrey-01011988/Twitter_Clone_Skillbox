@@ -2,6 +2,8 @@ from crud import BaseDAO
 from database import AsyncSessionApp
 from fastapi import Header, HTTPException
 from models import Users, Tweets, Media
+from sqlalchemy.orm import selectinload
+from sqlalchemy.testing.plugin.plugin_base import options
 
 
 # Назначение текущей сессии
@@ -44,7 +46,12 @@ class TweetDAO(BaseDAO):
         """
         async with AsyncSessionApp() as session:
             async with session.begin():
-                tweet = await cls.find_one_or_none_by_id(tweet_id)
+                tweet = await cls.find_one_or_none_by_id(
+                    data_id=tweet_id,
+                    options=[
+                    selectinload(Tweets.attachments)
+                ]
+                )
                 if tweet and tweet.author_id == user_id:
                     await session.delete(tweet)
                     return True

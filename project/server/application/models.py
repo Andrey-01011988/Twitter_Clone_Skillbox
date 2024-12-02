@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import List, Dict, Any
 
-from sqlalchemy import Integer, ForeignKey, String, DateTime, func
+from sqlalchemy import Integer, ForeignKey, String, DateTime, func, LargeBinary
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -64,8 +64,6 @@ class Users(BaseProj):
     def __repr__(self):
         return f"Пользователь: {self.name}, id: {self.id}"
 
-    # def to_json(self) -> Dict[str, Any]:
-    #     return {c.name: getattr(self, c.name) for c in self.__table__.columns}
     def to_json(self) -> Dict[str, Any]:
         return {
             "id": self.id,
@@ -101,11 +99,15 @@ class Tweets(BaseProj):
     )
 
     author: Mapped["Users"] = relationship("Users", back_populates="tweets")
-    likes: Mapped["Like"] = relationship(
+    likes: Mapped[List["Like"]] = relationship(
         "Like", back_populates="tweet", cascade="all, delete-orphan"
     )
-    media: Mapped["Media"] = relationship(
-        "Media", back_populates="tweet", cascade="all, delete-orphan"
+    # media: Mapped["Media"] = relationship(
+    #     "Media", back_populates="tweet", cascade="all, delete-orphan"
+    # )
+    # Изменяем строку media на attachments
+    attachments: Mapped[List["Media"]] = relationship(
+        "Media", lazy="joined", back_populates="tweet", cascade="all, delete-orphan"
     )
 
     def __repr__(self):
@@ -120,7 +122,7 @@ class Tweets(BaseProj):
                 "id": self.author.id,
                 "name": self.author.name,
             },
-            "attachments": [media.url for media in self.media] if self.media else [],  # предполагается наличие поля url в модели Media
+            "attachments": [f"/api/medias/{i_attachment.id}" for i_attachment in self.attachments] if self.attachments else [],
             "likes": [{"user_id": like.user_id, "name": like.user.name} for like in self.likes] if self.likes else [],
         }
 
@@ -144,19 +146,54 @@ class Like(BaseProj):
     user: Mapped["Users"] = relationship("Users")
 
 
+# class Media(BaseProj):
+#     """
+#     Модель Media хранит информацию о медиафайлах (например, изображениях), прикрепленных к твитам.
+#     Поля:
+#     id: уникальный идентификатор медиафайла.
+#     url: URL или путь к загруженному медиафайлу.
+#     tweet_id: идентификатор твита (внешний ключ).
+#     """
+#
+#     __tablename__ = "media"
+#
+#     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+#     url: Mapped[str] = mapped_column(String)
+#     tweet_id: Mapped[int] = mapped_column(Integer, ForeignKey("tweets.id"))
+#
+#     tweet: Mapped["Tweets"] = relationship("Tweets", back_populates="media")
+
+
 class Media(BaseProj):
     """
-    Модель Media хранит информацию о медиафайлах (например, изображениях), прикрепленных к твитам.
-    Поля:
-    id: уникальный идентификатор медиафайла.
-    url: URL или путь к загруженному медиафайлу.
-    tweet_id: идентификатор твита (внешний ключ).
-    """
+    Модель представления медиа-объектов, связанных с твитами.
 
-    __tablename__ = "media"
+    Эта модель используется для хранения информации о медиафайлах,
+    которые могут быть прикреплены к твитам. Каждый медиа-объект
+    имеет уникальный идентификатор и может содержать бинарные данные
+    файла, его имя и ссылку на соответствующий твит.
+
+    Атрибуты:
+        id (int): Уникальный идентификатор медиа-объекта.
+                  Является первичным ключом таблицы.
+
+        file_body (bytes): Бинарные данные файла. Используется для
+                           хранения содержимого медиафайла (например, изображений, видео).
+
+        file_name (str): Имя файла, которое будет использоваться для
+                         идентификации медиа-объекта.
+
+        tweet_id (int): Идентификатор твита, к которому прикреплен
+                         данный медиа-объект. Является внешним ключом на таблицу "tweets".
+
+        tweet (Tweets): Отношение к модели `Tweets`. Позволяет получить
+                        доступ к твиту, к которому прикреплен данный медиа-объект.
+    """
+    __tablename__ = "media"  # Убедитесь, что имя таблицы соответствует вашему проекту
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    url: Mapped[str] = mapped_column(String)
-    tweet_id: Mapped[int] = mapped_column(Integer, ForeignKey("tweets.id"))
+    file_body: Mapped[bytes] = mapped_column(LargeBinary)  # Хранит бинарные данные файла
+    file_name: Mapped[str] = mapped_column(String)  # Имя файла
+    tweet_id: Mapped[int] =  mapped_column(Integer, ForeignKey("tweets.id"), nullable=True)  # Внешний ключ на твиты
 
-    tweet: Mapped["Tweets"] = relationship("Tweets", back_populates="media")
+    tweet: Mapped["Tweets"] = relationship("Tweets", back_populates="attachments")

@@ -12,7 +12,6 @@ from database import AsyncSessionApp, proj_engine
 from models import BaseProj
 # from api.depencies import get_current_session
 from api.endpoints import main_router
-# from schemas import UserOut, UserIn
 
 
 @asynccontextmanager
@@ -23,6 +22,7 @@ async def lifespan(app: FastAPI):
         yield
     await current_session.close()
     await proj_engine.dispose()
+
 
 app_proj = FastAPI(lifespan=lifespan)
 
@@ -53,6 +53,23 @@ async def general_exception_handler(request: Request, exc: Exception):
     )
 
 
+# TODO: попробовать проект с использованием middleware, может удастся пройти авторизацию через браузер?
+
+# @app_proj.middleware("http")
+# async def check_user_middleware(request: Request, call_next):
+#     if request.url.path.startswith("/api") and not request.url.path.startswith("/api/medias/"):
+#         api_key = request.headers.get("Api-Key", "test")
+#         user = await service.get_has_user_by_api_key(api_key=api_key)
+#         if not user:
+#             return JSONResponse(status_code=404, content={"error": "User not found"})
+#
+#         # Сохраняем пользователя в атрибуте запроса
+#         request.state.current_user = user
+#
+#     response = await call_next(request)
+#     return response
+
+
 # Назначение текущей сессии
 # async def get_current_session():
 #     current_session = AsyncSessionApp()
@@ -63,6 +80,7 @@ async def general_exception_handler(request: Request, exc: Exception):
 app_proj.mount("/static", StaticFiles(directory="/app/static"), name="static")
 app_proj.mount("/js", StaticFiles(directory="/app/static/js"), name="js")
 app_proj.mount("/css", StaticFiles(directory="/app/static/css"), name="css")
+
 
 @app_proj.get("/index")
 def read_main():
@@ -78,7 +96,6 @@ async def hello():
     :return: str
     """
     return f'Welcome'
-
 
 # @app_proj.get("/users", response_model=List[UserOut])
 # async def get_all_users(current_session: AsyncSession = Depends(get_current_session)) -> Sequence[Users]:
