@@ -1,9 +1,8 @@
 from crud import BaseDAO
 from database import AsyncSessionApp
-from fastapi import Header, HTTPException
+from fastapi import Header, HTTPException, Request
 from models import Users, Tweets, Media
 from sqlalchemy.orm import selectinload
-from sqlalchemy.testing.plugin.plugin_base import options
 
 
 # Назначение текущей сессии
@@ -28,6 +27,13 @@ async def get_client_token(api_key: str = Header(...)):
     return api_key
 
 
+# Зависимость для получения текущего пользователя
+async def get_current_user(request: Request):
+    if not hasattr(request.state, 'current_user'):
+        raise HTTPException(status_code=403, detail="User not authenticated")
+    return request.state.current_user
+
+
 class UserDAO(BaseDAO):
     model = Users
 
@@ -47,10 +53,7 @@ class TweetDAO(BaseDAO):
         async with AsyncSessionApp() as session:
             async with session.begin():
                 tweet = await cls.find_one_or_none_by_id(
-                    data_id=tweet_id,
-                    options=[
-                    selectinload(Tweets.attachments)
-                ]
+                    data_id=tweet_id
                 )
                 if tweet and tweet.author_id == user_id:
                     await session.delete(tweet)

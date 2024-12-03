@@ -107,7 +107,7 @@ class Tweets(BaseProj):
     # )
     # Изменяем строку media на attachments
     attachments: Mapped[List["Media"]] = relationship(
-        "Media", lazy="joined", back_populates="tweet", cascade="all, delete-orphan"
+        "Media", back_populates="tweet", cascade="all, delete-orphan"
     )
 
     def __repr__(self):

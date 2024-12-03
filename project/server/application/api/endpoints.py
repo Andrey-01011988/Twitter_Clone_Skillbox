@@ -3,12 +3,12 @@ from io import BytesIO
 from typing import List, Sequence, Optional, Dict, Union, Any
 
 from PIL import Image
-from fastapi import APIRouter, Depends, Header, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import  StreamingResponse
 
-from api.dependencies import get_current_session, UserDAO, TweetDAO, MediaDAO, get_client_token
+from api.dependencies import get_current_session, UserDAO, TweetDAO, MediaDAO, get_client_token, get_current_user
 from models import Users, Tweets, Like
-from schemas import UserOut, TweetIn, TweetOut, ErrorResponse, SimpleUserOut
+from schemas import UserOut, TweetIn, TweetOut, ErrorResponse, SimpleUserOut, UserIn
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import selectinload
 from starlette.responses import JSONResponse
@@ -16,13 +16,13 @@ from starlette.responses import JSONResponse
 main_router = APIRouter(prefix="/api", tags=["API"], dependencies=[Depends(get_current_session)])
 
 
-@main_router.get("/users", response_model=List[SimpleUserOut])
+@main_router.get("/all_users", response_model=List[SimpleUserOut])
 async def get_all_users() -> Sequence[Users]:
     """
         Выводит всех пользователей
-        curl -i GET "http://localhost:8000/api/users"
+        curl -i GET "http://localhost:8000/api/all_users"
         Для запуска в docker-compose:
-        curl -i GET "http://localhost:5000/api/users"
+        curl -i GET "http://localhost:5000/api/all_users"
     """
 
     result = await UserDAO.find_all()
@@ -160,11 +160,26 @@ async def get_media(media_id: int):
         raise HTTPException(status_code=400, detail="Invalid image data")
 
 
+# Просто добавил из main.py
+@main_router.post("/add_user", status_code=201)
+async def add_one_user(user: UserIn) -> str:
+    """
+    Добавляет пользователя, возвращает его
+    curl -X POST "http://localhost:8000/api/add_user" -H "Content-Type: application/json" -d '{"name": "Anon", "api_key": "1wc65vc4v1fv"}'
+    Для запуска в docker-compose:
+    curl -X POST "http://localhost:5000/api/add_user" -H "Content-Type: application/json" -d '{"name": "Dan", "api_key": "test"}'
+    """
+
+    new_user = await UserDAO.add(**user.dict())
+
+    return f"User added: {new_user}\n"
+
+
 @main_router.post("/tweets", status_code=201)
 async def  add_tweet(tweet: TweetIn, api_key: str = Depends(get_client_token)) -> dict:
     """
     Добавляет новый твит от пользователя
-    curl -iX POST "http://localhost:5000/api/tweets" -H "api-key: 1wc65vc4v1fv" -H "Content-Type: application/json" -d '{"tweet_media_ids": [], "text": "Привет"}'
+    curl -iX POST "http://localhost:5000/api/tweets" -H "api-key: 1wc65vc4v1fv" -H "Content-Type: application/json" -d '{"tweet_media_ids": [], "content": "Привет"}'
     :param tweet:
     :param api_key:  ключ пользователя
     :return: Результат операции и идентификатор нового твита
@@ -173,7 +188,7 @@ async def  add_tweet(tweet: TweetIn, api_key: str = Depends(get_client_token)) -
 
     new_tweet_data ={
         "author_id": user.id,
-        "text": tweet.text,
+        "text": tweet.content,
         "timestamp": datetime.now().replace(tzinfo=None)
     }
     try:
@@ -208,6 +223,7 @@ async def add_media(api_key: str = Depends(get_client_token), file: UploadFile =
         - 400, если произошла ошибка при загрузке файла или создании записи в базе данных.
 
     curl -i -X POST -H "api-key: 1wc65vc4v1fv" -F "file=@/home/uservm/PycharmProjects/python_advanced_diploma/cats_1179x2556.jpg" "http://localhost:5000/api/medias?tweet_id=3"
+    /home/uservm/PycharmProjects/python_advanced_diploma/bottom-view-plane-sky.jpg
     """
     # Проверяем наличие твита, если tweet_id передан
     if tweet_id is not None:
@@ -234,19 +250,26 @@ async def add_media(api_key: str = Depends(get_client_token), file: UploadFile =
 
 
 @main_router.delete("/tweets/{tweet_id}")
-async def delete_tweet(tweet_id: int, api_key: str = Depends(get_client_token)) -> dict:
+async def delete_tweet(tweet_id: int, current_user: Users = Depends(get_current_user)) -> dict:
     """
-    Пользователь удаляет именно свой собственный твит.
+    Этот эндпоинт позволяет пользователю удалить твит по его идентификатору.
+    Удаление возможно только для твитов, принадлежащих текущему пользователю.
 
     :param tweet_id: Идентификатор твита для удаления.
-    :param api_key: API ключ пользователя.
-    :return: Статус операции.
-    curl -i -X DELETE -H "api-key: 1wc65vc4v1fv" "http://localhost:5000/api/tweets/4"
-    """
-    cur_user = await UserDAO.find_one_or_none(api_key=api_key)
+    :param current_user: Текущий пользователь, полученный из зависимостей.
+    :return: Статус операции в формате JSON.
 
-    # Пытаемся удалить твит через TweetDAO
-    result = await TweetDAO.delete_tweet(tweet_id=tweet_id, user_id=cur_user.id)
+    Пример запроса с использованием curl:
+    ```
+    curl -i -X DELETE -H "Api-Key: 1wc65vc4v1fv" "http://localhost:5000/api/tweets/<tweet_id>"
+    ```
+
+    :raises HTTPException:
+        - 403, если пользователь не аутентифицирован.
+        - 404, если твит не найден или пользователь не имеет прав на его удаление.
+    """
+
+    result = await TweetDAO.delete_tweet(tweet_id=tweet_id, user_id=current_user.id)
 
     if not result:
         raise HTTPException(status_code=404, detail="Твит не найден или вы не имеете прав на его удаление")

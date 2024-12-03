@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 
 from database import AsyncSessionApp, proj_engine
 from models import BaseProj
-# from api.depencies import get_current_session
+from api.dependencies import UserDAO
 from api.endpoints import main_router
 
 
@@ -55,19 +55,22 @@ async def general_exception_handler(request: Request, exc: Exception):
 
 # TODO: попробовать проект с использованием middleware, может удастся пройти авторизацию через браузер?
 
-# @app_proj.middleware("http")
-# async def check_user_middleware(request: Request, call_next):
-#     if request.url.path.startswith("/api") and not request.url.path.startswith("/api/medias/"):
-#         api_key = request.headers.get("Api-Key", "test")
-#         user = await service.get_has_user_by_api_key(api_key=api_key)
-#         if not user:
-#             return JSONResponse(status_code=404, content={"error": "User not found"})
-#
-#         # Сохраняем пользователя в атрибуте запроса
-#         request.state.current_user = user
-#
-#     response = await call_next(request)
-#     return response
+@app_proj.middleware("http")
+async def check_user_middleware(request: Request, call_next):
+    # Определяем список префиксов для исключения
+    excluded_prefixes = ["/api/medias/", "/api/all_users", "/api/add_user"]
+    # Проверяем, начинается ли путь с "/api" и не начинается ли он с любого из исключенных префиксов
+    if request.url.path.startswith("/api") and not any(request.url.path.startswith(prefix) for prefix in excluded_prefixes):
+        api_key = request.headers.get("Api-Key", "test")
+        user = await UserDAO.find_one_or_none(api_key=api_key)
+        if not user:
+            return JSONResponse(status_code=404, content={"error": "User not found"})
+
+        # Сохраняем пользователя в атрибуте запроса
+        request.state.current_user = user
+
+    response = await call_next(request)  # Передаем управление следующему обработчику
+    return response
 
 
 # Назначение текущей сессии
