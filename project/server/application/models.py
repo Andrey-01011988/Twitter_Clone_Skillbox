@@ -69,7 +69,7 @@ class Users(BaseProj):
             "id": self.id,
             "name": self.name,
             "followers": [{"id": follower.id, "name": follower.name} for follower in self.followers] if self.followers else [],
-            "following": self.following if self.following else []
+            "following": [{"id": followed.id, "name": followed.name} for followed in self.followers] if self.followers else []
         }
 
 
@@ -144,24 +144,6 @@ class Like(BaseProj):
 
     tweet: Mapped["Tweets"] = relationship("Tweets", back_populates="likes")
     user: Mapped["Users"] = relationship("Users")
-
-
-# class Media(BaseProj):
-#     """
-#     Модель Media хранит информацию о медиафайлах (например, изображениях), прикрепленных к твитам.
-#     Поля:
-#     id: уникальный идентификатор медиафайла.
-#     url: URL или путь к загруженному медиафайлу.
-#     tweet_id: идентификатор твита (внешний ключ).
-#     """
-#
-#     __tablename__ = "media"
-#
-#     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-#     url: Mapped[str] = mapped_column(String)
-#     tweet_id: Mapped[int] = mapped_column(Integer, ForeignKey("tweets.id"))
-#
-#     tweet: Mapped["Tweets"] = relationship("Tweets", back_populates="media")
 
 
 class Media(BaseProj):

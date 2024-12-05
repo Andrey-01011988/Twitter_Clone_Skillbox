@@ -1,8 +1,8 @@
 from crud import BaseDAO
 from database import AsyncSessionApp
 from fastapi import Header, HTTPException, Request
-from models import Users, Tweets, Media
-from sqlalchemy.orm import selectinload
+from models import Users, Tweets, Media, Like, Followers
+from sqlalchemy import delete, and_
 
 
 # Назначение текущей сессии
@@ -60,5 +60,78 @@ class TweetDAO(BaseDAO):
                     return True
                 return False
 
+
 class MediaDAO(BaseDAO):
     model = Media
+
+
+class LikeDAO(BaseDAO):
+    model = Like
+
+    @classmethod
+    async def delete_like(cls, tweet_id: int, user_id: int):
+        """
+        Удаляет лайк, если он принадлежит указанному пользователю.
+
+        :param tweet_id: Идентификатор твита
+        :param user_id: Идентификатор пользователя
+        :return: True, если твит был удален, иначе False
+        """
+        async with AsyncSessionApp() as session:
+            async with session.begin():
+                like = await cls.find_one_or_none(
+                    tweet_id=tweet_id,
+                    user_id=user_id
+                )
+                if like:
+                    await session.delete(like)
+                    return True
+                return False
+
+
+class FollowersDAO(BaseDAO):
+    model = Followers
+
+    @classmethod
+    async def add(cls, follower_id: int, followed_id: int):
+        """
+        Асинхронно добавляет новую запись о подписке между пользователями.
+
+        :param follower_id: Идентификатор пользователя, который фолловит.
+        :param followed_id: Идентификатор пользователя, на которого фолловят.
+        """
+
+        # Проверяем существование записи
+        existing_follow = await cls.find_one_or_none(
+            follower_id=follower_id,
+            followed_id=followed_id
+        )
+
+        if existing_follow:
+            raise Exception("Подписка уже существует")
+
+        async with AsyncSessionApp() as session:
+            async with session.begin():
+                new_follow = cls.model(follower_id=follower_id, followed_id=followed_id)
+                session.add(new_follow)
+                await session.commit()
+
+    @classmethod
+    async def delete(cls, follower_id: int, followed_id: int):
+        """
+        Асинхронно удаляет запись о подписке между пользователями.
+
+        :param follower_id: Идентификатор пользователя, который отписывается.
+        :param followed_id: Идентификатор пользователя, от которого отписываются.
+        """
+        async with AsyncSessionApp() as session:
+            async with session.begin():
+                await session.execute(
+                    delete(cls.model).where(
+                        and_(
+                            cls.model.follower_id == follower_id,
+                            cls.model.followed_id == followed_id
+                        )
+                    )
+                )
+                await session.commit()

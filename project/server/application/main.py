@@ -2,14 +2,15 @@ from contextlib import asynccontextmanager
 # from typing import List, Sequence
 
 from fastapi import FastAPI, HTTPException, Request
-# from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+
 # from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 
 from database import AsyncSessionApp, proj_engine
-from models import BaseProj
+from models import BaseProj, Users
 from api.dependencies import UserDAO
 from api.endpoints import main_router
 
@@ -62,7 +63,12 @@ async def check_user_middleware(request: Request, call_next):
     # Проверяем, начинается ли путь с "/api" и не начинается ли он с любого из исключенных префиксов
     if request.url.path.startswith("/api") and not any(request.url.path.startswith(prefix) for prefix in excluded_prefixes):
         api_key = request.headers.get("Api-Key", "test")
-        user = await UserDAO.find_one_or_none(api_key=api_key)
+        user = await UserDAO.find_one_or_none(
+            options=[
+                selectinload(Users.followers)
+            ],
+            api_key=api_key
+        )
         if not user:
             return JSONResponse(status_code=404, content={"error": "User not found"})
 
