@@ -194,7 +194,13 @@ async def get_user_info_by_id(user_id: int, current_user: Users = Depends(get_cu
         - 500, если произошла внутренняя ошибка сервера.
     """
 
-    user_info_by_id = await UserDAO.find_one_or_none_by_id(user_id)
+    user_info_by_id = await UserDAO.find_one_or_none_by_id(
+        user_id,
+        options=[
+            selectinload(Users.followers),
+            selectinload(Users.following)
+        ]
+    )
     if user_info_by_id is None:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
 

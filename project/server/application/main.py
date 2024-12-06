@@ -65,7 +65,8 @@ async def check_user_middleware(request: Request, call_next):
         api_key = request.headers.get("Api-Key", "test")
         user = await UserDAO.find_one_or_none(
             options=[
-                selectinload(Users.followers)
+                selectinload(Users.followers),
+                selectinload(Users.following)
             ],
             api_key=api_key
         )

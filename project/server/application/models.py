@@ -50,16 +50,15 @@ class Users(BaseProj):
     tweets: Mapped[List["Tweets"]] = relationship(back_populates="author")
 
     followers = relationship(
-        "Users",
-        secondary=Followers.__tablename__,
-        primaryjoin=id == Followers.follower_id,
+        "Users",  # Указывает, что это отношение связано с моделью Users.
+        secondary=Followers.__tablename__,  # Определяет условие соединения для получения подписчиков
+        # (т.е. пользователей, которые следуют за текущим пользователем).
+        primaryjoin=id == Followers.follower_id,  # Определяет условие соединения для получения пользователей,
+        # на которых подписан текущий пользователь.
         secondaryjoin=id == Followers.followed_id,
-        backref="following",
+        backref="following",  # Создает обратное отношение, позволяющее получить всех пользователей,
+        # на которых подписан текущий пользователь через атрибут 'following'.
     )
-
-    @property
-    def following(self):
-        return [{"id": followed.id, "name": followed.name} for followed in self.followers]
 
     def __repr__(self):
         return f"Пользователь: {self.name}, id: {self.id}"
@@ -69,7 +68,7 @@ class Users(BaseProj):
             "id": self.id,
             "name": self.name,
             "followers": [{"id": follower.id, "name": follower.name} for follower in self.followers] if self.followers else [],
-            "following": [{"id": followed.id, "name": followed.name} for followed in self.followers] if self.followers else []
+            "following": [{"id": followed.id, "name": followed.name} for followed in self.following] if self.following else []
         }
 
 
