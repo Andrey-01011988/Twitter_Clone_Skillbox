@@ -54,8 +54,6 @@ async def general_exception_handler(request: Request, exc: Exception):
     )
 
 
-# TODO: попробовать проект с использованием middleware, может удастся пройти авторизацию через браузер?
-
 @app_proj.middleware("http")
 async def check_user_middleware(request: Request, call_next):
     # Определяем список префиксов для исключения
