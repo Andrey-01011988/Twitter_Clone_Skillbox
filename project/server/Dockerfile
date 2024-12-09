@@ -6,8 +6,6 @@ COPY /server /server
 
 RUN pip install -r /server/requirements.txt
 
-RUN usermod -aG root www-data
-
 ENV PYTHONPATH=/server/application
 
 WORKDIR /server/application

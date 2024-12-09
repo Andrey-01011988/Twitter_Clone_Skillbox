@@ -13,7 +13,7 @@ services:
       - my_network
     volumes:
       - ./client/static:/app/static  # Использование той же локальной директории для статики
-      - ./client/templates:/app/templates  # Использование той же локальной директории для шаблонов
+#      - ./client/templates:/app/templates  # Использование той же локальной директории для шаблонов
   server:
     build:
       context: .
@@ -28,7 +28,7 @@ services:
       - my_network
     volumes:
       - ./client/static:/app/static  # Монтирование локальной директории для статики
-      - ./client/templates:/app/templates  # Монтирование локальной директории для шаблонов
+#      - ./client/templates:/app/templates  # Монтирование локальной директории для шаблонов
   db:
     image: postgres:latest
     container_name: postgres_container
