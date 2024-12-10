@@ -5,8 +5,8 @@ from fastapi import FastAPI, HTTPException, Request
 from sqlalchemy.orm import selectinload
 
 # from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
+# from starlette.responses import FileResponse
+# from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 
 from database import AsyncSessionApp, proj_engine
@@ -93,6 +93,17 @@ async def check_user_middleware(request: Request, call_next):
 # @app_proj.get("/index")
 # def read_main():
 #     return FileResponse("/app/templates/index_fastAPI.html")
+
+# ЭТО НЕ РАБОТАЕТ в контейнере!!!
+# @app_proj.get("/index")
+# def read_main():
+#     return FileResponse("../client/static/index.html")
+#
+#
+# app_proj.mount("/static", StaticFiles(directory="../client/static"), name="static")
+# app_proj.mount("/js", StaticFiles(directory="../client/static/js"), name="js")
+# app_proj.mount("/css", StaticFiles(directory="../client/static/css"), name="css")
+# ЭТО НЕ РАБОТАЕТ в контейнере!!!
 
 
 @app_proj.get("/welcome")

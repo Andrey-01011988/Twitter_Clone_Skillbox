@@ -77,8 +77,8 @@ async def get_users_tweets(current_user: Users = Depends(get_current_user)) -> J
                 selectinload(Tweets.author), # Подгружаем автора твита
                 selectinload(Tweets.attachments),  # Подгружаем медиафайлы твита
                 selectinload(Tweets.likes).selectinload(Like.user)  # Подгружаем лайки и пользователей, которые их поставили
-            ],
-            author_id=current_user.id)
+            ]
+        )
 
         # Преобразуем каждый твит в формат JSON
         tweets_json = [tweet.to_json() for tweet in all_tweets]
@@ -232,7 +232,7 @@ async def  add_tweet(tweet: TweetIn, current_user: Users = Depends(get_current_u
     curl -iX POST "http://localhost:5000/api/tweets"
         -H "Api-Key: 1wc65vc4v1fv"
         -H "Content-Type: application/json"
-        -d '{"tweet_media_ids": [], "content": "Привет"}'
+        -d '{"tweet_media_ids": [], "tweet_data": "Привет"}'
     :param current_user: Текущий пользователь, который добавляет твит.
                          Получается из зависимости get_current_user.
     :param tweet: Объект типа TweetIn, содержащий данные о твите.
@@ -250,7 +250,7 @@ async def  add_tweet(tweet: TweetIn, current_user: Users = Depends(get_current_u
 
     new_tweet_data ={
         "author_id": current_user.id,
-        "text": tweet.content,
+        "text": tweet.tweet_data,
         "timestamp": datetime.now().replace(tzinfo=None)
     }
     try:

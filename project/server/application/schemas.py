@@ -8,7 +8,7 @@ class BaseUser(BaseModel):
 
 
 class BaseTweet(BaseModel):
-    content: str
+    tweet_data: str
 
 
 class ErrorResponse(BaseModel):
@@ -50,9 +50,10 @@ class Like(BaseModel):
     name: str
 
 
-class TweetOut(BaseTweet):
+class TweetOut(BaseModel):
     id: int
     author: Dict[str, Union[int, str]]
+    content: str
     attachments: List[str] = []  # новое поле для вложений
     likes: List[Like] = []  # новое поле для лайков
 
