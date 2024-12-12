@@ -57,7 +57,7 @@ async def general_exception_handler(request: Request, exc: Exception):
 @app_proj.middleware("http")
 async def check_user_middleware(request: Request, call_next):
     # Определяем список префиксов для исключения
-    excluded_prefixes = ["/api/medias/", "/api/all_users", "/api/add_user"]
+    excluded_prefixes = ["/api/medias/", "/api/all_users", "/api/add_user", "/api/media"]
     # Проверяем, начинается ли путь с "/api" и не начинается ли он с любого из исключенных префиксов
     if request.url.path.startswith("/api") and not any(request.url.path.startswith(prefix) for prefix in excluded_prefixes):
         api_key = request.headers.get("Api-Key", "test")
@@ -78,34 +78,6 @@ async def check_user_middleware(request: Request, call_next):
     return response
 
 
-# Назначение текущей сессии
-# async def get_current_session():
-#     current_session = AsyncSessionApp()
-#     try:
-#         yield current_session
-#     finally:
-#         await current_session.close()
-# app_proj.mount("/static", StaticFiles(directory="/app/static"), name="static")
-# app_proj.mount("/js", StaticFiles(directory="/app/static/js"), name="js")
-# app_proj.mount("/css", StaticFiles(directory="/app/static/css"), name="css")
-#
-#
-# @app_proj.get("/index")
-# def read_main():
-#     return FileResponse("/app/templates/index_fastAPI.html")
-
-# ЭТО НЕ РАБОТАЕТ в контейнере!!!
-# @app_proj.get("/index")
-# def read_main():
-#     return FileResponse("../client/static/index.html")
-#
-#
-# app_proj.mount("/static", StaticFiles(directory="../client/static"), name="static")
-# app_proj.mount("/js", StaticFiles(directory="../client/static/js"), name="js")
-# app_proj.mount("/css", StaticFiles(directory="../client/static/css"), name="css")
-# ЭТО НЕ РАБОТАЕТ в контейнере!!!
-
-
 @app_proj.get("/welcome")
 async def hello():
     """
@@ -115,34 +87,3 @@ async def hello():
     :return: str
     """
     return f'Welcome'
-
-# @app_proj.get("/users", response_model=List[UserOut])
-# async def get_all_users(current_session: AsyncSession = Depends(get_current_session)) -> Sequence[Users]:
-#     """
-#     Выводит всех пользователей
-#     curl -i GET "http://localhost:8000/users"
-#     Для запуска в docker-compose:
-#     curl -i GET "http://localhost:5000/users"
-#     """
-#
-#     users = Users
-#
-#     result = await current_session.execute(select(users))
-#
-#     return result.scalars().all()
-#
-#
-# @app_proj.post("/user", response_model=UserOut, status_code=201)
-# async def add_one_user(user: UserIn, current_session: AsyncSession = Depends(get_current_session)) -> str:
-#     """
-#     Добавляет пользователя, возвращает его
-#     curl -X POST "http://localhost:8000/user" -H "Content-Type: application/json" -d '{"name": "Anon", "api_key": "1wc65vc4v1fv"}'
-#     Для запуска в docker-compose:
-#     curl -X POST "http://localhost:5000/user" -H "Content-Type: application/json" -d '{"name": "Bob", "api_key": "541df411vfv45"}'
-#     """
-#
-#     new_user = Users(**dict(user))
-#
-#     async with current_session.begin():
-#         current_session.add(new_user)
-#     return f"User added: {new_user}\n"

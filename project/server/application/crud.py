@@ -1,6 +1,6 @@
 from typing import TypeVar, Generic
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import SQLAlchemyError
 
 from database import AsyncSessionApp
@@ -87,3 +87,31 @@ class BaseDAO(Generic[T]):
                     await session.rollback()
                     raise e
                 return new_instance
+
+    @classmethod
+    async def update(cls, instance: T, **values):
+        """
+        Асинхронно обновляет указанные поля экземпляра модели.
+
+        Аргументы:
+            instance: Экземпляр модели, который нужно обновить.
+            **values: Именованные параметры для обновления полей экземпляра модели.
+
+        Возвращает:
+            Обновленный экземпляр модели.
+        """
+        async with AsyncSessionApp() as session:
+            async with session.begin():
+                stmt = (
+                    update(cls.model)
+                    .where(cls.model.id == instance.id)  # Условие для обновления по ID
+                    .values(**values)  # Устанавливаем новые значения
+                )
+                try:
+                    await session.execute(stmt)  # Выполняем запрос на обновление
+                    await session.commit()  # Сохраняем изменения в базе данных
+                except SQLAlchemyError as e:
+                    await session.rollback()  # Откатываем изменения в случае ошибки
+                    raise e
+
+            return instance  # Возвращаем обновленный экземпляр

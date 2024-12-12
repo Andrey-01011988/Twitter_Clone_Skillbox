@@ -142,14 +142,14 @@ async def get_user_info(current_user: Users = Depends(get_current_user)) -> JSON
     }
 
 
-@main_router.get("/medias/{media_id}")
+@main_router.get("/media/{media_id}")
 async def get_media(media_id: int):
     """
     Получение медиа привязанного к твиту в виде изображения.
 
     :param media_id: Идентификатор медиа.
     :return: Возвращает изображение в формате, определяемом по содержимому.
-    curl -i -X GET "http://localhost:5000/api/medias/1"
+    curl -i -X GET "http://localhost:5000/api/media/1"
     """
     media = await MediaDAO.find_one_or_none_by_id(media_id)
 
@@ -255,13 +255,19 @@ async def  add_tweet(tweet: TweetIn, current_user: Users = Depends(get_current_u
     }
     try:
         new_tweet = await TweetDAO.add(**new_tweet_data)
+        # Привязка медиафайлов к новому твиту
+        for media_id in tweet.tweet_media_ids:
+            media = await MediaDAO.find_one_or_none_by_id(media_id)  # Получаем медиа по ID
+            if media:
+                media.tweet_id = new_tweet.id  # Привязываем медиа к новому твиту
+                await MediaDAO.update(media, tweet_id=new_tweet.id)  # Обновляем запись в базе данных
         return {"result": True, "tweet_id": new_tweet.id}
     except SQLAlchemyError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
 @main_router.post("/medias")
-async def add_media(api_key: str = Depends(get_client_token), file: UploadFile = File(...), tweet_id: int = None):
+async def add_media(api_key: str = Depends(get_client_token), file: UploadFile = File(...)) -> dict:
     """
      Эндпоинт для загрузки медиафайлов.
 
@@ -286,11 +292,6 @@ async def add_media(api_key: str = Depends(get_client_token), file: UploadFile =
     "http://localhost:5000/api/medias?tweet_id=3"
     /home/uservm/PycharmProjects/python_advanced_diploma/bottom-view-plane-sky.jpg
     """
-    # Проверяем наличие твита, если tweet_id передан
-    if tweet_id is not None:
-        tweet = await TweetDAO.find_one_or_none_by_id(tweet_id)
-        if tweet is None:
-            raise HTTPException(status_code=404, detail="Твит не найден")
 
     # Сохранение файла на сервере
     try:
@@ -299,7 +300,7 @@ async def add_media(api_key: str = Depends(get_client_token), file: UploadFile =
         # Создание записи в базе данных
         new_media = await MediaDAO.add(file_body=file_body,
                                        file_name=file.filename,
-                                       tweet_id=tweet_id)  # Здесь можно указать tweet_id если он известен
+                                       )
 
         return {"result": True, "media_id": new_media.id}
 

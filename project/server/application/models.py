@@ -120,7 +120,7 @@ class Tweets(BaseProj):
                 "id": self.author.id,
                 "name": self.author.name,
             },
-            "attachments": [f"/api/medias/{i_attachment.id}" for i_attachment in self.attachments] if self.attachments else [],
+            "attachments": [f"/api/media/{i_attachment.id}" for i_attachment in self.attachments] if self.attachments else [],
             "likes": [{"user_id": like.user_id, "name": like.user.name} for like in self.likes] if self.likes else [],
         }
 
