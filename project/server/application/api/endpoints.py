@@ -30,6 +30,75 @@ async def get_all_users() -> Sequence[Users]:
     return result
 
 
+# @main_router.get("/tweets", response_model=Dict[str, Union[bool, List[TweetOut]]],
+#          responses={403: {"model": ErrorResponse}, 500: {"model": ErrorResponse}})
+# async def get_users_tweets(current_user: Users = Depends(get_current_user)) -> JSONResponse | dict[str, bool | list[Any]] | Any:
+#     """
+#     Получение ленты твитов для пользователя.
+#
+#     Этот endpoint позволяет пользователю получить список твитов на основе переданного API ключа.
+#     Если API ключ неверный, возвращается ошибка 403. В случае других ошибок возвращается ошибка 500.
+#
+#     Пример запроса:
+#     curl -i -H "api-key: 1wc65vc4v1fv" "http://localhost:5000/api/tweets"
+#
+#     :param current_user: Пользователь, полученный из зависимости `get_current_user`,
+#                          который извлекает текущего пользователя из состояния запроса.
+#                          Если пользователь не аутентифицирован, возвращается ошибка 403.
+#     :return: JSON-ответ с результатом запроса. Если запрос успешен, возвращает список твитов.
+#              В случае ошибки возвращает соответствующее сообщение об ошибке.
+#              - Код 403: `detail`: "User not authenticated".
+#              - Код 500: `detail`: Сообщение об ошибке с описанием проблемы.
+#
+#     Пример успешного ответа:
+#     {
+#         "result": true,
+#         "tweets": [
+#             {
+#                 "id": 1,
+#                 "content": "Привет, мир!",
+#                 "author": {
+#                     "id": 123,
+#                     "name": "Пользователь1"
+#                 },
+#                 "attachments": [],
+#                 "likes": []
+#             },
+#             ...
+#         ]
+#     }
+#
+#     Примечание: Убедитесь, что переданный API ключ действителен и соответствует зарегистрированному пользователю.
+#     """
+#
+#     try:
+#         # Получаем список идентификаторов пользователей, которых фолловит текущий пользователь
+#         followed_user_ids = [user.id for user in current_user.following]
+#
+#         # Получаем все твиты пользователя с подгрузкой связанных данных (автор, медиа и лайки)
+#         all_tweets = await TweetDAO.find_all(options=[
+#                 selectinload(Tweets.author), # Подгружаем автора твита
+#                 selectinload(Tweets.attachments),  # Подгружаем медиафайлы твита
+#                 selectinload(Tweets.likes).selectinload(Like.user)  # Подгружаем лайки и пользователей, которые их поставили
+#             ],
+#             filters={"author_id": followed_user_ids},  # Фильтруем по идентификаторам авторов
+#             order_by=["likes"],  # Сортируем по количеству лайков
+#             joins=[Tweets.likes]  # Соединяем таблицу лайков
+#         )
+#
+#         # Преобразуем каждый твит в формат JSON
+#         tweets_json = [tweet.to_json() for tweet in all_tweets]
+#     except Exception as e:
+#         # # Обработка любых других ошибок (например, ошибки базы данных)
+#         raise HTTPException(status_code=500, detail=str(e))
+#
+#     # Возвращаем успешный ответ с результатами
+#     return {
+#         "result": True,
+#         "tweets": tweets_json  # Список твитов в формате JSON
+#     }
+
+
 @main_router.get("/tweets", response_model=Dict[str, Union[bool, List[TweetOut]]],
          responses={403: {"model": ErrorResponse}, 500: {"model": ErrorResponse}})
 async def get_users_tweets(current_user: Users = Depends(get_current_user)) -> JSONResponse | dict[str, bool | list[Any]] | Any:
@@ -276,8 +345,6 @@ async def add_media(api_key: str = Depends(get_client_token), file: UploadFile =
 
     :param api_key: API ключ пользователя, необходимый для аутентификации.
     :param file: Загружаемый файл (изображение или другой медиафайл).
-    :param tweet_id: (необязательный) ID твита, к которому будет привязано медиа.
-                     Если передан, проверяется существование твита.
 
     :return: JSON-ответ с результатом операции и ID загруженного медиафайла.
 
@@ -367,7 +434,7 @@ async def follow_user(user_id: int, current_user: Users = Depends(get_current_us
         raise HTTPException(status_code=409, detail="Вы уже подписаны на этого пользователя")
 
     # Добавляем запись о подписке в таблицу followers
-    await FollowersDAO.add(follower_id=current_user.id, followed_id=user_id)
+    await FollowersDAO.add(follower_id=user_id, followed_id=current_user.id)
 
     return {"result": True}
 
@@ -424,15 +491,15 @@ async def delete_following(user_id: int, current_user: Users = Depends(get_curre
 
     # Проверяем, есть ли запись о подписке
     existing_follow = await FollowersDAO.find_one_or_none(
-        follower_id=current_user.id,
-        followed_id=user_id
+        follower_id=user_id,
+        followed_id=current_user.id
     )
 
     if not existing_follow:
         raise HTTPException(status_code=409, detail="Вы не подписаны на этого пользователя")
 
     # Удаляем запись о подписке из таблицы followers
-    await FollowersDAO.delete(follower_id=current_user.id, followed_id=user_id)
+    await FollowersDAO.delete(follower_id=user_id, followed_id=current_user.id)
 
     return {"result": True}
 

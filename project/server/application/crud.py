@@ -49,20 +49,40 @@ class BaseDAO(Generic[T]):
             return result.scalar_one_or_none()
 
     @classmethod
-    async def find_all(cls, options=None, **filter_by):
+    async def find_all(cls, options=None, filters: dict = None, order_by: list = None, joins: list = None):
         """
         Асинхронно находит и возвращает все экземпляры модели, удовлетворяющие указанным критериям.
 
         Аргументы:
-            **filter_by: Критерии фильтрации в виде именованных параметров.
+            session: Асинхронная сессия SQLAlchemy.
+            filters: Словарь фильтров для запроса.
+            order_by: Список полей для сортировки.
+            joins: Список таблиц для соединения.
 
         Возвращает:
             Список экземпляров модели.
         """
         async with AsyncSessionApp() as session:
-            query = select(cls.model).filter_by(**filter_by)
+            query = select(cls.model)
+            # Применяем соединения
+            if joins:
+                for join in joins:
+                    query = query.outerjoin(join)  # Используем outerjoin для соединения
+
             if options:
                 query = query.options(*options)  # Применяем опции к запросу
+            if filters:
+                # Применяем фильтры к запросу
+                for key, value in filters.items():
+                    column = getattr(cls.model, key)
+                    if isinstance(value, list):
+                        query = query.filter(column.in_(value))  # Для списков используем in_
+                    else:
+                        query = query.filter(column == value)  # Для одиночных значений
+            if order_by:
+                # Применяем сортировку к запросу
+                for field in order_by:
+                    query = query.order_by(getattr(cls.model, field))
             result = await session.execute(query)
             return result.scalars().all()
 
