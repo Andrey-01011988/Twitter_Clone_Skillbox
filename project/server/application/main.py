@@ -1,18 +1,13 @@
 from contextlib import asynccontextmanager
-# from typing import List, Sequence
 
 from fastapi import FastAPI, HTTPException, Request
 from sqlalchemy.orm import selectinload
-
-# from sqlalchemy.ext.asyncio import AsyncSession
-# from starlette.responses import FileResponse
-# from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 
-from database import AsyncSessionApp, proj_engine
-from models import BaseProj, Users
-from api.dependencies import UserDAO
-from api.endpoints import main_router
+from application.database import AsyncSessionApp, proj_engine
+from application.models import BaseProj, Users
+from application.api.dependencies import UserDAO
+from application.api.endpoints import main_router
 
 
 @asynccontextmanager

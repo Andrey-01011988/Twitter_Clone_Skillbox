@@ -1,8 +1,9 @@
-from crud import BaseDAO
-from database import AsyncSessionApp
 from fastapi import Header, HTTPException, Request
-from models import Users, Tweets, Media, Like, Followers
 from sqlalchemy import delete, and_
+
+from application.crud import BaseDAO
+from application.database import AsyncSessionApp
+from application.models import Users, Tweets, Media, Like, Followers
 
 
 # Назначение текущей сессии

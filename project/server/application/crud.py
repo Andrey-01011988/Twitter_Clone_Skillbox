@@ -3,7 +3,7 @@ from typing import TypeVar, Generic
 from sqlalchemy import select, update
 from sqlalchemy.exc import SQLAlchemyError
 
-from database import AsyncSessionApp
+from application.database import AsyncSessionApp
 
 
 T = TypeVar('T')

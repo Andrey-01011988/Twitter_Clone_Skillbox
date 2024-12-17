@@ -8,8 +8,8 @@ RUN pip install -r /server/requirements.txt
 
 RUN usermod -aG root www-data
 
-ENV PYTHONPATH=/server/application
+ENV PYTHONPATH=/server
 
-WORKDIR /server/application
+WORKDIR /server
 
-CMD ["uvicorn", "main:app_proj", "--host", "0.0.0.0", "--port", "5000", "--reload"]
+CMD ["uvicorn", "application.main:app_proj", "--host", "0.0.0.0", "--port", "5000", "--reload"]

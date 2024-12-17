@@ -6,12 +6,12 @@ from PIL import Image
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import  StreamingResponse
 
-from api.dependencies import get_current_session, UserDAO, TweetDAO, MediaDAO, LikeDAO, FollowersDAO, get_client_token, get_current_user
-from models import Users, Tweets, Like
-from schemas import UserOut, TweetIn, TweetOut, ErrorResponse, SimpleUserOut, UserIn
+from application.api.dependencies import get_current_session, UserDAO, TweetDAO, MediaDAO, LikeDAO, FollowersDAO, get_client_token, get_current_user
+from application.models import Users, Tweets, Like
+from application.schemas import UserOut, TweetIn, TweetOut, ErrorResponse, SimpleUserOut, UserIn
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import selectinload
-from starlette.responses import JSONResponse
+from fastapi.responses import JSONResponse
 
 main_router = APIRouter(prefix="/api", tags=["API"], dependencies=[Depends(get_current_session)])
 
@@ -28,75 +28,6 @@ async def get_all_users() -> Sequence[Users]:
     result = await UserDAO.find_all()
 
     return result
-
-
-# @main_router.get("/tweets", response_model=Dict[str, Union[bool, List[TweetOut]]],
-#          responses={403: {"model": ErrorResponse}, 500: {"model": ErrorResponse}})
-# async def get_users_tweets(current_user: Users = Depends(get_current_user)) -> JSONResponse | dict[str, bool | list[Any]] | Any:
-#     """
-#     Получение ленты твитов для пользователя.
-#
-#     Этот endpoint позволяет пользователю получить список твитов на основе переданного API ключа.
-#     Если API ключ неверный, возвращается ошибка 403. В случае других ошибок возвращается ошибка 500.
-#
-#     Пример запроса:
-#     curl -i -H "api-key: 1wc65vc4v1fv" "http://localhost:5000/api/tweets"
-#
-#     :param current_user: Пользователь, полученный из зависимости `get_current_user`,
-#                          который извлекает текущего пользователя из состояния запроса.
-#                          Если пользователь не аутентифицирован, возвращается ошибка 403.
-#     :return: JSON-ответ с результатом запроса. Если запрос успешен, возвращает список твитов.
-#              В случае ошибки возвращает соответствующее сообщение об ошибке.
-#              - Код 403: `detail`: "User not authenticated".
-#              - Код 500: `detail`: Сообщение об ошибке с описанием проблемы.
-#
-#     Пример успешного ответа:
-#     {
-#         "result": true,
-#         "tweets": [
-#             {
-#                 "id": 1,
-#                 "content": "Привет, мир!",
-#                 "author": {
-#                     "id": 123,
-#                     "name": "Пользователь1"
-#                 },
-#                 "attachments": [],
-#                 "likes": []
-#             },
-#             ...
-#         ]
-#     }
-#
-#     Примечание: Убедитесь, что переданный API ключ действителен и соответствует зарегистрированному пользователю.
-#     """
-#
-#     try:
-#         # Получаем список идентификаторов пользователей, которых фолловит текущий пользователь
-#         followed_user_ids = [user.id for user in current_user.following]
-#
-#         # Получаем все твиты пользователя с подгрузкой связанных данных (автор, медиа и лайки)
-#         all_tweets = await TweetDAO.find_all(options=[
-#                 selectinload(Tweets.author), # Подгружаем автора твита
-#                 selectinload(Tweets.attachments),  # Подгружаем медиафайлы твита
-#                 selectinload(Tweets.likes).selectinload(Like.user)  # Подгружаем лайки и пользователей, которые их поставили
-#             ],
-#             filters={"author_id": followed_user_ids},  # Фильтруем по идентификаторам авторов
-#             order_by=["likes"],  # Сортируем по количеству лайков
-#             joins=[Tweets.likes]  # Соединяем таблицу лайков
-#         )
-#
-#         # Преобразуем каждый твит в формат JSON
-#         tweets_json = [tweet.to_json() for tweet in all_tweets]
-#     except Exception as e:
-#         # # Обработка любых других ошибок (например, ошибки базы данных)
-#         raise HTTPException(status_code=500, detail=str(e))
-#
-#     # Возвращаем успешный ответ с результатами
-#     return {
-#         "result": True,
-#         "tweets": tweets_json  # Список твитов в формате JSON
-#     }
 
 
 @main_router.get("/tweets", response_model=Dict[str, Union[bool, List[TweetOut]]],
@@ -284,6 +215,7 @@ async def get_user_info_by_id(user_id: int, current_user: Users = Depends(get_cu
 async def add_one_user(user: UserIn) -> str:
     """
     Добавляет пользователя, возвращает его
+
     curl -X POST "http://localhost:8000/api/add_user" -H "Content-Type: application/json" -d '{"name": "Anon", "api_key": "1wc65vc4v1fv"}'
     Для запуска в docker-compose:
     curl -X POST "http://localhost:5000/api/add_user" -H "Content-Type: application/json" -d '{"name": "Dan", "api_key": "test"}'
@@ -298,22 +230,26 @@ async def add_one_user(user: UserIn) -> str:
 async def  add_tweet(tweet: TweetIn, current_user: Users = Depends(get_current_user)) -> dict:
     """
     Добавляет новый твит от пользователя
+
     curl -iX POST "http://localhost:5000/api/tweets"
         -H "Api-Key: 1wc65vc4v1fv"
         -H "Content-Type: application/json"
         -d '{"tweet_media_ids": [], "tweet_data": "Привет"}'
+
     :param current_user: Текущий пользователь, который добавляет твит.
                          Получается из зависимости get_current_user.
     :param tweet: Объект типа TweetIn, содержащий данные о твите.
                   Поля:
                   - tweet_media_ids (List[int]): Список идентификаторов медиа, связанных с твитом.
                   - content (str): Содержимое твита.
+
     :return: Словарь с результатом операции и идентификатором нового твита.
              Пример ответа:
              {
                  "result": True,
                  "tweet_id": 123
              }
+
     :raises HTTPException: Если произошла ошибка при добавлении твита, возвращает статус 400 и сообщение об ошибке.
     """
 
@@ -410,6 +346,7 @@ async def add_like(tweet_id: int, current_user: Users = Depends(get_current_user
 async def follow_user(user_id: int, current_user: Users = Depends(get_current_user)) -> dict:
     """
     Пользователь может зафоловить другого пользователя.
+
     :param user_id: Пользователь, которого фолловят.
     :param current_user: Пользователь, который фолловит.
     :return: Статус операции в формате JSON.
@@ -508,6 +445,7 @@ async def delete_following(user_id: int, current_user: Users = Depends(get_curre
 async def delete_like(tweet_id: int, current_user: Users = Depends(get_current_user)) -> dict:
     """
     Пользователь может убрать отметку «Нравится» с твита.
+
     :param tweet_id: Идентификатор твита.
     :param current_user: Текущий пользователь, полученный из зависимостей.
     :return: Статус операции в формате JSON.
