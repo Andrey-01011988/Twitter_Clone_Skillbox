@@ -139,3 +139,4 @@ dmypy.json
 .swp
 
 db/
+test_db/

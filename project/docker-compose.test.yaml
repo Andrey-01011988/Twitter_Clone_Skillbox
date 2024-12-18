@@ -31,7 +31,7 @@ services:
     restart: always
     networks:
       - my_network
-    command: /bin/sh -c "pytest -v"  # Запуск pytest с помощью оболочки
+#    command: /bin/sh -c "pytest -v"  # Запуск pytest с помощью оболочки
 
 networks:
   my_network:
