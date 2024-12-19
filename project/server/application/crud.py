@@ -1,10 +1,12 @@
+import logging
 from typing import TypeVar, Generic
 
-from sqlalchemy import select, update
+from sqlalchemy import select, update, delete, and_
 from sqlalchemy.exc import SQLAlchemyError
 
-from application.database import AsyncSessionApp
+from sqlalchemy.ext.asyncio import AsyncSession
 
+logger = logging.getLogger(__name__)
 
 T = TypeVar('T')
 
@@ -13,125 +15,234 @@ class BaseDAO(Generic[T]):
     model: T = None
 
     @classmethod
-    async def find_one_or_none_by_id(cls, data_id: int, options=None):
+    async def find_one_or_none_by_id(cls, data_id: int, session: AsyncSession, options=None):
         """
-        Асинхронно находит и возвращает один экземпляр модели по указанным критериям или None.
+        Асинхронно находит и возвращает один экземпляр модели по указанному идентификатору или None.
 
         Аргументы:
-            data_id: Критерии фильтрации в виде идентификатора записи.
+            data_id (int): Идентификатор записи для поиска.
+            session (AsyncSession): Асинхронная сессия SQLAlchemy.
+            options (list, optional): Дополнительные параметры для настройки запроса.
 
         Возвращает:
             Экземпляр модели или None, если ничего не найдено.
         """
-        async with AsyncSessionApp() as session:
-            query = select(cls.model).filter_by(id=data_id)
-            if options:
-                query = query.options(*options)  # Применяем опции к запросу
+        logger.info("Создание запроса для поиска по ID")
+        query = select(cls.model).filter_by(id=data_id)
+        if options:
+            query = query.options(*options)  # Применяем опции к запросу
+        async with session:
             result = await session.execute(query)
-            return result.scalar_one_or_none()
+        logger.info("Запрос выполнен")
+        return result.scalar_one_or_none()
 
     @classmethod
-    async def find_one_or_none(cls, options=None, **filter_by):
+    async def find_one_or_none(cls, session: AsyncSession, options=None, **filter_by):
         """
         Асинхронно находит и возвращает один экземпляр модели по указанным критериям или None.
 
         Аргументы:
-            **filter_by: Критерии фильтрации в виде именованных параметров.
+            session (AsyncSession): Асинхронная сессия SQLAlchemy.
+            options (list, optional): Дополнительные параметры для настройки запроса.
+            **filter_by: Именованные параметры для фильтрации.
 
         Возвращает:
             Экземпляр модели или None, если ничего не найдено.
         """
-        async with AsyncSessionApp() as session:
-            query = select(cls.model).filter_by(**filter_by)
-            if options:
-                query = query.options(*options)  # Применяем опции к запросу
+        logger.info("Создание запроса для поиска по критериям")
+        query = select(cls.model).filter_by(**filter_by)
+        if options:
+            query = query.options(*options)  # Применяем опции к запросу
+        async with session:
             result = await session.execute(query)
-            return result.scalar_one_or_none()
+        logger.info("Запрос выполнен")
+        return result.scalar_one_or_none()
 
     @classmethod
-    async def find_all(cls, options=None, filters: dict = None, order_by: list = None, joins: list = None):
+    async def find_all(cls, session: AsyncSession, options=None, filters: dict = None, order_by: list = None,
+                       joins: list = None):
         """
         Асинхронно находит и возвращает все экземпляры модели, удовлетворяющие указанным критериям.
 
         Аргументы:
-            session: Асинхронная сессия SQLAlchemy.
-            filters: Словарь фильтров для запроса.
-            order_by: Список полей для сортировки.
-            joins: Список таблиц для соединения.
+            session (AsyncSession): Асинхронная сессия SQLAlchemy.
+            options (list, optional): Дополнительные параметры для настройки запроса.
+            filters (dict, optional): Словарь фильтров для запроса.
+            order_by (list, optional): Список полей для сортировки.
+            joins (list, optional): Список таблиц для соединения.
 
         Возвращает:
             Список экземпляров модели.
         """
-        async with AsyncSessionApp() as session:
-            query = select(cls.model)
-            # Применяем соединения
-            if joins:
-                for join in joins:
-                    query = query.outerjoin(join)  # Используем outerjoin для соединения
+        logger.info("Создание запроса для поиска всех экземпляров")
+        query = select(cls.model)
 
-            if options:
-                query = query.options(*options)  # Применяем опции к запросу
-            if filters:
-                # Применяем фильтры к запросу
-                for key, value in filters.items():
-                    column = getattr(cls.model, key)
-                    if isinstance(value, list):
-                        query = query.filter(column.in_(value))  # Для списков используем in_
-                    else:
-                        query = query.filter(column == value)  # Для одиночных значений
-            if order_by:
-                # Применяем сортировку к запросу
-                for field in order_by:
-                    query = query.order_by(getattr(cls.model, field))
+        # Применяем соединения
+        if joins:
+            for join in joins:
+                query = query.outerjoin(join)  # Используем outerjoin для соединения
+
+        if options:
+            query = query.options(*options)  # Применяем опции к запросу
+        if filters:
+            # Применяем фильтры к запросу
+            for key, value in filters.items():
+                column = getattr(cls.model, key)
+                if isinstance(value, list):
+                    query = query.filter(column.in_(value))  # Для списков используем in_
+                else:
+                    query = query.filter(column == value)  # Для одиночных значений
+        if order_by:
+            # Применяем сортировку к запросу
+            for field in order_by:
+                query = query.order_by(getattr(cls.model, field))
+        async with session:
             result = await session.execute(query)
-            return result.scalars().all()
+        logger.info("Запрос выполнен")
+        return result.scalars().all()
 
     @classmethod
-    async def add(cls, **values):
+    async def add(cls, session: AsyncSession, **values):
         """
         Асинхронно создает новый экземпляр модели с указанными значениями.
 
         Аргументы:
+            session (AsyncSession): Асинхронная сессия SQLAlchemy.
             **values: Именованные параметры для создания нового экземпляра модели.
 
         Возвращает:
             Созданный экземпляр модели.
+
+        Исключения:
+            SQLAlchemyError: Если произошла ошибка при добавлении в базу данных.
         """
-        async with AsyncSessionApp() as session:
+        logger.info("Создание нового экземпляра модели")
+
+        new_instance = cls.model(**values)
+
+        try:
             async with session.begin():
-                new_instance = cls.model(**values)
                 session.add(new_instance)
-                try:
-                    await session.commit()
-                except SQLAlchemyError as e:
-                    await session.rollback()
-                    raise e
+                await session.commit()
+                logger.info("Новый экземпляр успешно создан")
                 return new_instance
+        except SQLAlchemyError as e:
+            await session.rollback()
+            logger.error(f"Ошибка при создании нового экземпляра: {e}")
+            raise e
 
     @classmethod
-    async def update(cls, instance: T, **values):
+    async def add_followers(cls, session: AsyncSession, follower_id: int, followed_id: int):
+        """
+        Асинхронно добавляет новую запись о подписке между пользователями.
+
+        :param session:
+        :param follower_id: Идентификатор пользователя, который фолловит.
+        :param followed_id: Идентификатор пользователя, на которого фолловят.
+        """
+
+        # Проверяем существование записи
+        existing_follow = await cls.find_one_or_none(
+            follower_id=follower_id,
+            followed_id=followed_id,
+            session=session
+        )
+
+        if existing_follow:
+            raise Exception("Подписка уже существует")
+
+        async with session:
+            async with session.begin():
+                new_follow = cls.model(follower_id=follower_id, followed_id=followed_id)
+                session.add(new_follow)
+                await session.commit()
+
+    @classmethod
+    async def update(cls, session: AsyncSession, instance: T, **values):
         """
         Асинхронно обновляет указанные поля экземпляра модели.
 
         Аргументы:
-            instance: Экземпляр модели, который нужно обновить.
+            session (AsyncSession): Асинхронная сессия SQLAlchemy.
+            instance (T): Экземпляр модели, который нужно обновить.
             **values: Именованные параметры для обновления полей экземпляра модели.
 
         Возвращает:
             Обновленный экземпляр модели.
-        """
-        async with AsyncSessionApp() as session:
-            async with session.begin():
-                stmt = (
-                    update(cls.model)
-                    .where(cls.model.id == instance.id)  # Условие для обновления по ID
-                    .values(**values)  # Устанавливаем новые значения
-                )
-                try:
-                    await session.execute(stmt)  # Выполняем запрос на обновление
-                    await session.commit()  # Сохраняем изменения в базе данных
-                except SQLAlchemyError as e:
-                    await session.rollback()  # Откатываем изменения в случае ошибки
-                    raise e
 
-            return instance  # Возвращаем обновленный экземпляр
+        Исключения:
+            SQLAlchemyError: Если произошла ошибка при обновлении в базе данных.
+        """
+        logger.info("Обновление экземпляра модели")
+
+        stmt = (
+            update(cls.model)
+            .where(cls.model.id == instance.id)  # Условие для обновления по ID
+            .values(**values)  # Устанавливаем новые значения
+        )
+
+        try:
+            async with session.begin():
+                await session.execute(stmt)  # Выполняем запрос на обновление
+                await session.commit()  # Сохраняем изменения в базе данных
+                logger.info("Экземпляр успешно обновлен")
+                return instance  # Возвращаем обновленный экземпляр
+        except SQLAlchemyError as e:
+            await session.rollback()  # Откатываем изменения в случае ошибки
+            logger.error(f"Ошибка при обновлении экземпляра: {e}")
+            raise e
+
+    @classmethod
+    async def delete(cls, session: AsyncSession, instance: T):
+        """
+        Асинхронно удаляет экземпляр модели.
+
+        Аргументы:
+            session (AsyncSession): Асинхронная сессия SQLAlchemy.
+            instance (T): Экземпляр модели, который нужно удалить.
+
+        Возвращает:
+            bool: True, если экземпляр успешно удален.
+
+        Исключения:
+            SQLAlchemyError: Если произошла ошибка при удалении из базы данных.
+        """
+        logger.info("Удаление экземпляра модели")
+
+        query_smt = (
+            delete(cls.model)
+            .where(cls.model.id == instance.id)
+        )
+
+        try:
+            async with session.begin():
+                await session.execute(query_smt)  # Выполняем запрос на удаление
+                await session.commit()  # Сохраняем изменения в базе данных
+                logger.info("Экземпляр успешно удален")
+                return True  # Возвращаем True при успешном удалении
+        except SQLAlchemyError as e:
+            await session.rollback()  # Откатываем изменения в случае ошибки
+            logger.error(f"Ошибка при удалении экземпляра: {e}")
+            raise e
+
+    @classmethod
+    async def delete_followers(cls, session: AsyncSession, follower_id: int, followed_id: int):
+        """
+        Асинхронно удаляет запись о подписке между пользователями.
+
+        :param session:
+        :param follower_id: Идентификатор пользователя, который отписывается.
+        :param followed_id: Идентификатор пользователя, от которого отписываются.
+        """
+        async with session:
+            async with session.begin():
+                await session.execute(
+                    delete(cls.model).where(
+                        and_(
+                            cls.model.follower_id == follower_id,
+                            cls.model.followed_id == followed_id
+                        )
+                    )
+                )
+                await session.commit()
+

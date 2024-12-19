@@ -174,6 +174,6 @@ class Media(BaseProj):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     file_body: Mapped[bytes] = mapped_column(LargeBinary)  # Хранит бинарные данные файла
     file_name: Mapped[str] = mapped_column(String)  # Имя файла
-    tweet_id: Mapped[int] =  mapped_column(Integer, ForeignKey("tweets.id"), nullable=True)  # Внешний ключ на твиты
+    tweet_id: Mapped[int] =  mapped_column(Integer, ForeignKey("tweets.id", ondelete="CASCADE"), nullable=True)  # Внешний ключ на твиты
 
     tweet: Mapped["Tweets"] = relationship("Tweets", back_populates="attachments")

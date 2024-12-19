@@ -1,12 +1,13 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from fastapi.responses import JSONResponse
 
 from application.database import AsyncSessionApp, proj_engine
 from application.models import BaseProj, Users
-from application.api.dependencies import UserDAO
+from application.api.dependencies import UserDAO, get_current_session
 from application.api.endpoints import main_router
 
 
@@ -51,23 +52,61 @@ async def general_exception_handler(request: Request, exc: Exception):
 
 @app_proj.middleware("http")
 async def check_user_middleware(request: Request, call_next):
+    """
+    Middleware для проверки аутентификации пользователя по API ключу.
+
+    Этот middleware проверяет наличие API ключа в заголовках запроса и пытается найти
+    соответствующего пользователя в базе данных. Если пользователь найден, он сохраняется
+    в атрибуте состояния запроса для дальнейшего использования в обработчиках.
+
+    Аргументы:
+        request (Request): Объект запроса FastAPI, содержащий информацию о текущем запросе.
+        call_next (Callable): Функция, которая принимает запрос и возвращает ответ.
+                              Используется для передачи управления следующему обработчику.
+
+    Возвращает:
+        Response: Ответ FastAPI, полученный от следующего обработчика.
+
+    Исключения:
+        Возвращает JSONResponse с кодом 404 и сообщением {"error": "User not found"},
+        если пользователь с указанным API ключом не найден в базе данных.
+
+    Пример использования:
+        Этот middleware автоматически применяется ко всем запросам, начинающимся с "/api",
+        за исключением тех, которые указаны в списке исключений. Например:
+
+        - Запросы к "/api/medias/" не требуют проверки пользователя.
+        - Запросы к "/api/all_users" также не требуют проверки.
+
+    Примечание:
+        Убедитесь, что функция `get_current_session` правильно настроена для получения
+        асинхронной сессии SQLAlchemy, чтобы middleware мог корректно взаимодействовать
+        с базой данных.
+    """
     # Определяем список префиксов для исключения
     excluded_prefixes = ["/api/medias/", "/api/all_users", "/api/add_user", "/api/media"]
-    # Проверяем, начинается ли путь с "/api" и не начинается ли он с любого из исключенных префиксов
-    if request.url.path.startswith("/api") and not any(request.url.path.startswith(prefix) for prefix in excluded_prefixes):
-        api_key = request.headers.get("Api-Key", "test")
-        user = await UserDAO.find_one_or_none(
-            options=[
-                selectinload(Users.followers),
-                selectinload(Users.following)
-            ],
-            api_key=api_key
-        )
-        if not user:
-            return JSONResponse(status_code=404, content={"error": "User not found"})
 
-        # Сохраняем пользователя в атрибуте запроса
-        request.state.current_user = user
+    # Проверяем, начинается ли путь с "/api" и не начинается ли он с любого из исключенных префиксов
+    if request.url.path.startswith("/api") and not any(
+            request.url.path.startswith(prefix) for prefix in excluded_prefixes):
+        async for session in get_current_session():
+            request.state.session = session  # Сохраняем сессию в атрибуте запроса
+            api_key = request.headers.get("Api-Key", "test")
+
+            user = await UserDAO.find_one_or_none(
+                session=session,
+                options=[
+                    selectinload(Users.followers),
+                    selectinload(Users.following)
+                ],
+                api_key=api_key
+            )
+
+            if not user:
+                return JSONResponse(status_code=404, content={"error": "User not found"})
+
+            # Сохраняем пользователя в атрибуте запроса
+            request.state.current_user = user
 
     response = await call_next(request)  # Передаем управление следующему обработчику
     return response
