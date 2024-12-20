@@ -13,10 +13,17 @@ class UserFactory(factory.alchemy.SQLAlchemyModelFactory):
 
     class Meta:
         model = Users
-        sqlalchemy_session = AsyncSessionTest()  # Укажите вашу сессию SQLAlchemy
 
     name = factory.LazyAttribute(lambda _: fake.name())  # Генерация имени пользователя
     api_key = factory.LazyAttribute(lambda _: fake.bothify(text='??###?##'))  # Генерация API-ключа
+
+    @classmethod
+    def create_user(cls, session=None, **kwargs):
+        """Создает пользователя и добавляет его в указанную сессию."""
+        user = cls(**kwargs)  # Создаем объект пользователя
+        if session:
+            session.add(user)  # Добавляем пользователя в переданную сессию
+        return user
 
 
 class TweetFactory(factory.alchemy.SQLAlchemyModelFactory):
@@ -24,10 +31,17 @@ class TweetFactory(factory.alchemy.SQLAlchemyModelFactory):
 
     class Meta:
         model = Tweets
-        sqlalchemy_session = AsyncSessionTest()  # Укажите вашу сессию SQLAlchemy
 
     text = factory.LazyAttribute(lambda _: fake.sentence(nb_words=5, variable_nb_words=True))  # Генерация текста твита
     author_id = factory.SubFactory(UserFactory)  # Привязка твита к случайному пользователю
+
+    @classmethod
+    def create_tweet(cls, session=None, **kwargs):
+        """Создает твит и добавляет его в указанную сессию."""
+        tweet = cls(**kwargs)
+        if session:
+            session.add(tweet)
+        return tweet
 
 
 class LikeFactory(factory.alchemy.SQLAlchemyModelFactory):
@@ -35,10 +49,17 @@ class LikeFactory(factory.alchemy.SQLAlchemyModelFactory):
 
     class Meta:
         model = Like
-        sqlalchemy_session = AsyncSessionTest()  # Укажите вашу сессию SQLAlchemy
 
     tweet_id = factory.SubFactory(TweetFactory)  # Создание твита, который лайкаем
     user_id = factory.SubFactory(UserFactory)  # Создание пользователя, который ставит лайк
+
+    @classmethod
+    def create_like(cls, session=None, **kwargs):
+        """Создает лайк и добавляет его в указанную сессию."""
+        like = cls(**kwargs)
+        if session:
+            session.add(like)
+        return like
 
 
 class MediaFactory(factory.alchemy.SQLAlchemyModelFactory):
@@ -46,7 +67,6 @@ class MediaFactory(factory.alchemy.SQLAlchemyModelFactory):
 
     class Meta:
         model = Media
-        sqlalchemy_session = AsyncSessionTest()  # Укажите вашу сессию SQLAlchemy
 
     @factory.lazy_attribute
     def file_body(self):
@@ -67,13 +87,28 @@ class MediaFactory(factory.alchemy.SQLAlchemyModelFactory):
     file_name = factory.LazyAttribute(lambda obj: os.path.basename(obj.file_body))  # Имя файла медиа
     tweet_id = factory.SubFactory(TweetFactory)  # Привязываем медиа к твиту
 
+    @classmethod
+    def create_media(cls, session=None, **kwargs):
+        """Создает медиафайл и добавляет его в указанную сессию."""
+        media = cls(**kwargs)
+        if session:
+            session.add(media)
+        return media
+
 
 class FollowerFactory(factory.alchemy.SQLAlchemyModelFactory):
     """Генератор случайных подписок пользователей."""
 
     class Meta:
         model = Followers
-        sqlalchemy_session = AsyncSessionTest()  # Укажите вашу сессию SQLAlchemy
 
     follower_id = factory.SubFactory(UserFactory)  # Создание пользователя, который подписывается
     followed_id = factory.SubFactory(UserFactory)  # Создание пользователя, на которого подписываются
+
+    @classmethod
+    def create_follower(cls, session=None, **kwargs):
+        """Создает подписку и добавляет ее в указанную сессию."""
+        follower = cls(**kwargs)
+        if session:
+            session.add(follower)
+        return follower
