@@ -1,7 +1,7 @@
+import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import FastAPI, HTTPException, Request
 from sqlalchemy.orm import selectinload
 from fastapi.responses import JSONResponse
 
@@ -9,6 +9,10 @@ from application.database import AsyncSessionApp, proj_engine
 from application.models import BaseProj, Users
 from application.api.dependencies import UserDAO, get_current_session
 from application.api.endpoints import main_router
+
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -83,13 +87,16 @@ async def check_user_middleware(request: Request, call_next):
         асинхронной сессии SQLAlchemy, чтобы middleware мог корректно взаимодействовать
         с базой данных.
     """
+    logger.info(f"Обрабатываем путь: {request.url.path}")
     # Определяем список префиксов для исключения
     excluded_prefixes = ["/api/medias/", "/api/all_users", "/api/add_user", "/api/media"]
+    logger.info("Сравниваем с исключенными префиксами: %s", excluded_prefixes)
 
     # Проверяем, начинается ли путь с "/api" и не начинается ли он с любого из исключенных префиксов
     if request.url.path.startswith("/api") and not any(
             request.url.path.startswith(prefix) for prefix in excluded_prefixes):
         async for session in get_current_session():
+            logger.info("Путь не исключен из проверки.")
             request.state.session = session  # Сохраняем сессию в атрибуте запроса
             api_key = request.headers.get("Api-Key", "test")
 
@@ -107,6 +114,8 @@ async def check_user_middleware(request: Request, call_next):
 
             # Сохраняем пользователя в атрибуте запроса
             request.state.current_user = user
+    else:
+        logger.info("Путь исключен из проверки.")
 
     response = await call_next(request)  # Передаем управление следующему обработчику
     return response

@@ -96,7 +96,7 @@ class BaseDAO(Generic[T]):
             # Применяем сортировку к запросу
             for field in order_by:
                 query = query.order_by(getattr(cls.model, field))
-        async with session:
+        async with session.begin():
             result = await session.execute(query)
         logger.info("Запрос выполнен")
         return result.scalars().all()

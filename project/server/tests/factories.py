@@ -13,17 +13,18 @@ class UserFactory(factory.alchemy.SQLAlchemyModelFactory):
 
     class Meta:
         model = Users
+        sqlalchemy_session = None
 
     name = factory.LazyAttribute(lambda _: fake.name())  # Генерация имени пользователя
     api_key = factory.LazyAttribute(lambda _: fake.bothify(text='??###?##'))  # Генерация API-ключа
 
-    @classmethod
-    def create_user(cls, session=None, **kwargs):
-        """Создает пользователя и добавляет его в указанную сессию."""
-        user = cls(**kwargs)  # Создаем объект пользователя
-        if session:
-            session.add(user)  # Добавляем пользователя в переданную сессию
-        return user
+    # @classmethod
+    # def create_user(cls, session=None, **kwargs):
+    #     """Создает пользователя и добавляет его в указанную сессию."""
+    #     user = cls(**kwargs)  # Создаем объект пользователя
+    #     if session:
+    #         session.add(user)  # Добавляем пользователя в переданную сессию
+    #     return user
 
 
 class TweetFactory(factory.alchemy.SQLAlchemyModelFactory):
