@@ -5,38 +5,46 @@ from typing import List, Sequence, Optional, Dict, Union, Any
 from PIL import Image
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from fastapi.responses import  StreamingResponse, JSONResponse
-
-from application.api.dependencies import get_current_session, UserDAO, TweetDAO, MediaDAO, LikeDAO, FollowersDAO, get_client_token, get_current_user
-from application.models import Users, Tweets, Like
-from application.schemas import UserOut, TweetIn, TweetOut, ErrorResponse, SimpleUserOut, UserIn
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from application.api.dependencies import get_current_session, UserDAO, TweetDAO, MediaDAO, LikeDAO, FollowersDAO, get_client_token, get_current_user
+from application.models import Users, Tweets, Like
+from application.schemas import UserOut, TweetIn, TweetOut, ErrorResponse, SimpleUserOut, UserIn
+
+
 main_router = APIRouter(prefix="/api", tags=["API"])
 
 
+# @main_router.get("/all_users", response_model=List[SimpleUserOut])
+# async def get_all_users(session: AsyncSession = Depends(get_current_session)) -> List[Users]:
+#     """
+#     Выводит всех пользователей.
+#
+#     Этот эндпоинт возвращает список всех пользователей из базы данных.
+#
+#     Пример запроса:
+#         curl -i GET "http://localhost:8000/api/all_users"
+#
+#     Для запуска в docker-compose:
+#         curl -i GET "http://localhost:5000/api/all_users"
+#
+#     Аргументы:
+#         session (AsyncSession): Асинхронная сессия SQLAlchemy.
+#
+#     Возвращает:
+#         Список пользователей.
+#     """
+#     result = await UserDAO.find_all(session=session)
+#     return result
+
+
 @main_router.get("/all_users", response_model=List[SimpleUserOut])
-async def get_all_users(session: AsyncSession = Depends(get_current_session)) -> List[Users]:
-    """
-    Выводит всех пользователей.
-
-    Этот эндпоинт возвращает список всех пользователей из базы данных.
-
-    Пример запроса:
-        curl -i GET "http://localhost:8000/api/all_users"
-
-    Для запуска в docker-compose:
-        curl -i GET "http://localhost:5000/api/all_users"
-
-    Аргументы:
-        session (AsyncSession): Асинхронная сессия SQLAlchemy.
-
-    Возвращает:
-        Список пользователей.
-    """
-    result = await UserDAO.find_all(session=session)
-    return result
+async def get_all_users(session: AsyncSession = Depends(get_current_session)) -> Sequence[Users]:
+    result = await session.execute(select(Users))
+    return result.scalars().all()
 
 
 @main_router.get("/tweets", response_model=Dict[str, Union[bool, List[TweetOut]]],
