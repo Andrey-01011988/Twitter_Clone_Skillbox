@@ -1,7 +1,7 @@
 import logging
 
 from fastapi import Header, HTTPException, Request, Depends
-from sqlalchemy import delete, and_
+# from sqlalchemy import delete, and_
 
 from application.crud import BaseDAO
 from application.database import AsyncSessionApp
@@ -17,8 +17,10 @@ async def get_current_session() -> AsyncSession:
     logger.info("Создание новой сессии Dependencies")
     async with AsyncSessionApp() as current_session:
         try:
+            logger.info(f"Передача сессии session: {current_session}")
             yield current_session
         finally:
+            logger.info(f"Закрывается сессия session: {current_session}")
             await current_session.close()
             logger.info("Закрытие сессии Dependencies")
 
@@ -32,8 +34,10 @@ async def get_client_token(session: AsyncSession = Depends(get_current_session),
     :return: API ключ, если он валиден
     """
     user = await UserDAO.find_one_or_none(api_key=api_key,  session=session)
+    logger.info(f"Пользователь найден {user}")
     if user is None:
         raise HTTPException(status_code=403, detail="Доступ запрещен: неверный API ключ")
+    logger.info(f"Возвращен ключ api_key: {api_key}")
     return api_key
 
 

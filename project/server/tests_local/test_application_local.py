@@ -110,19 +110,15 @@ async def setup_database():
             # # Единый commit для всех изменений
             # await test_session.commit()
             logger.info("Все данные успешно добавлены в базу данных")
-
-            yield
-
         except Exception as e:
             logger.error(f"Ошибка при работе с базой данных: {e}")
             await test_session.rollback()
             raise
-
-        finally:
-            # Очистка после тестов
-            async with test_engine.begin() as conn:
-                await conn.run_sync(BaseProj.metadata.drop_all)
-            await test_session.close()
+    yield
+    # Очистка после тестов
+    async with test_engine.begin() as conn:
+        await conn.run_sync(BaseProj.metadata.drop_all)
+    await test_session.close()
 
 
 # @pytest.mark.asyncio

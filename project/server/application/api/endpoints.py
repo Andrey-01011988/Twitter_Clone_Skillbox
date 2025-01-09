@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from io import BytesIO
 from typing import List, Sequence, Optional, Dict, Union, Any
@@ -13,6 +14,10 @@ from sqlalchemy.orm import selectinload
 from application.api.dependencies import get_current_session, UserDAO, TweetDAO, MediaDAO, LikeDAO, FollowersDAO, get_client_token, get_current_user
 from application.models import Users, Tweets, Like
 from application.schemas import UserOut, TweetIn, TweetOut, ErrorResponse, SimpleUserOut, UserIn
+
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 main_router = APIRouter(prefix="/api", tags=["API"])
@@ -90,9 +95,11 @@ async def get_users_tweets(request: Request) -> JSONResponse | dict[
 
     Примечание: Убедитесь, что переданный API ключ действителен и соответствует зарегистрированному пользователю.
     """
-    session = request.state.session  # Получаем сохраненную сессию
+    session: AsyncSession = request.state.session  # Получаем сохраненную сессию
+    logger.info(f"Сессия получена из middleware session: {session.info}")
     try:
         # Получаем все твиты пользователя с подгрузкой связанных данных (автор, медиа и лайки)
+        logger.info(f"Сессия передается в метод запроса session: {session.info}")
         all_tweets = await TweetDAO.find_all(session=session, options=[
             selectinload(Tweets.author),  # Подгружаем автора твита
             selectinload(Tweets.attachments),  # Подгружаем медиафайлы твита
