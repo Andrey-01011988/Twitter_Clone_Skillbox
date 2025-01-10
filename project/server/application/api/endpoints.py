@@ -14,7 +14,7 @@ from sqlalchemy.orm import selectinload
 from application.api.dependencies import get_current_session, UserDAO, TweetDAO, MediaDAO, LikeDAO, FollowersDAO, get_client_token, get_current_user
 from application.models import Users, Tweets, Like
 from application.schemas import UserOut, TweetIn, TweetOut, ErrorResponse, SimpleUserOut, UserIn
-
+from starlette.responses import JSONResponse
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -23,38 +23,40 @@ logger = logging.getLogger(__name__)
 main_router = APIRouter(prefix="/api", tags=["API"])
 
 
-# @main_router.get("/all_users", response_model=List[SimpleUserOut])
-# async def get_all_users(session: AsyncSession = Depends(get_current_session)) -> List[Users]:
-#     """
-#     Выводит всех пользователей.
-#
-#     Этот эндпоинт возвращает список всех пользователей из базы данных.
-#
-#     Пример запроса:
-#         curl -i GET "http://localhost:8000/api/all_users"
-#
-#     Для запуска в docker-compose:
-#         curl -i GET "http://localhost:5000/api/all_users"
-#
-#     Аргументы:
-#         session (AsyncSession): Асинхронная сессия SQLAlchemy.
-#
-#     Возвращает:
-#         Список пользователей.
-#     """
-#     result = await UserDAO.find_all(session=session)
-#     return result
-
-
 @main_router.get("/all_users", response_model=List[SimpleUserOut])
-async def get_all_users(session: AsyncSession = Depends(get_current_session)) -> Sequence[Users]:
-    result = await session.execute(select(Users))
-    return result.scalars().all()
+async def get_all_users(session: AsyncSession = Depends(get_current_session)) -> List[Users]:
+    """
+    Выводит всех пользователей.
+
+    Этот эндпоинт возвращает список всех пользователей из базы данных.
+
+    Пример запроса:
+        curl -i GET "http://localhost:8000/api/all_users"
+
+    Для запуска в docker-compose:
+        curl -i GET "http://localhost:5000/api/all_users"
+
+    Аргументы:
+        session (AsyncSession): Асинхронная сессия SQLAlchemy.
+
+    Возвращает:
+        Список пользователей.
+    """
+    result = await UserDAO.find_all(session=session)
+    return result
+
+
+# @main_router.get("/all_users", response_model=List[SimpleUserOut])
+# async def get_all_users(session: AsyncSession = Depends(get_current_session)) -> Sequence[Users]:
+#     result = await session.execute(select(Users))
+#     return result.scalars().all()
 
 
 @main_router.get("/tweets", response_model=Dict[str, Union[bool, List[TweetOut]]],
                  responses={403: {"model": ErrorResponse}, 500: {"model": ErrorResponse}})
-async def get_users_tweets(request: Request) -> JSONResponse | dict[
+async def get_users_tweets(
+        session: AsyncSession = Depends(get_current_session)
+    ) -> JSONResponse | dict[
     str, bool | list[Any]] | Any:
     """
     Получение ленты твитов для пользователя.
@@ -95,11 +97,11 @@ async def get_users_tweets(request: Request) -> JSONResponse | dict[
 
     Примечание: Убедитесь, что переданный API ключ действителен и соответствует зарегистрированному пользователю.
     """
-    session: AsyncSession = request.state.session  # Получаем сохраненную сессию
-    logger.info(f"Сессия получена из middleware session: {session.info}")
+    # session: AsyncSession = request.state.session  # Получаем сохраненную сессию
+    logger.info(f"Сессия получена из зависимости session: {session}")
     try:
         # Получаем все твиты пользователя с подгрузкой связанных данных (автор, медиа и лайки)
-        logger.info(f"Сессия передается в метод запроса session: {session.info}")
+        logger.info(f"Сессия передается в метод запроса session: {session}")
         all_tweets = await TweetDAO.find_all(session=session, options=[
             selectinload(Tweets.author),  # Подгружаем автора твита
             selectinload(Tweets.attachments),  # Подгружаем медиафайлы твита
@@ -121,7 +123,9 @@ async def get_users_tweets(request: Request) -> JSONResponse | dict[
 
 @main_router.get("/users/me", response_model=Dict[str, Union[bool, UserOut]],
                  responses={403: {"model": ErrorResponse}, 500: {"model": ErrorResponse}})
-async def get_user_info(current_user: Users = Depends(get_current_user)) -> JSONResponse | dict[str, bool | list[Any]] | Any:
+async def get_user_info(
+        current_user = Depends(get_current_user)
+    ) -> JSONResponse | dict[str, bool | list[Any]] | Any:
     """
     Получение информации о профиле текущего пользователя.
 
@@ -162,6 +166,18 @@ async def get_user_info(current_user: Users = Depends(get_current_user)) -> JSON
     Пример запроса:
         curl -i -X GET -H "Api-Key: 1wc65vc4v1fv" "http://localhost:5000/api/users/me"
     """
+
+    # current_user = await UserDAO.find_one_or_none(
+    #     session=session,
+    #     options=[
+    #         selectinload(Users.followers),
+    #         selectinload(Users.following)
+    #     ],
+    #     api_key=api_key)
+    #
+    # if not current_user:
+    #     logger.warning(f"Пользователь с API ключом {api_key} не найден.")
+    #     return JSONResponse(status_code=404, content={"error": "User not found"})
 
     return {
         "result": True,
@@ -210,7 +226,7 @@ async def get_media(media_id: int, session: AsyncSession = Depends(get_current_s
 @main_router.get("/users/{user_id}", response_model=Dict[str, Union[bool, UserOut]],
                  responses={403: {"model": ErrorResponse}, 500: {"model": ErrorResponse}})
 async def get_user_info_by_id(user_id: int,
-                              request: Request) -> JSONResponse | dict[
+                              session: AsyncSession = Depends(get_current_session)) -> JSONResponse | dict[
     str, bool | list[Any]] | Any:
     """
     Пользователь может получить информацию о произвольном профиле по его id.
@@ -232,7 +248,7 @@ async def get_user_info_by_id(user_id: int,
         - 404, если пользователь с указанным id не найден.
         - 500, если произошла внутренняя ошибка сервера.
     """
-    session = request.state.session  # Получаем сохраненную сессию
+    # session = request.state.session  # Получаем сохраненную сессию
     user_info_by_id = await UserDAO.find_one_or_none_by_id(
         user_id,
         session=session,
@@ -276,7 +292,11 @@ async def add_one_user(user: UserIn, session: AsyncSession = Depends(get_current
 
 
 @main_router.post("/tweets", status_code=201)
-async def add_tweet(tweet: TweetIn, request: Request, current_user: Users = Depends(get_current_user)) -> dict:
+async def add_tweet(
+        tweet: TweetIn,
+        session: AsyncSession = Depends(get_current_session),
+        current_user: Users = Depends(get_current_user)
+    ) -> dict[str, bool | Any]:
     """
     Добавляет новый твит от пользователя.
 
@@ -305,7 +325,18 @@ async def add_tweet(tweet: TweetIn, request: Request, current_user: Users = Depe
         -d '{"tweet_media_ids": [], "tweet_data": "Привет"}'
     ```
     """
-    session = request.state.session  # Получаем сохраненную сессию
+    # session = request.state.session  # Получаем сохраненную сессию
+    # current_user = await UserDAO.find_one_or_none(
+    #     session=session,
+    #     options=[
+    #         selectinload(Users.followers),
+    #         selectinload(Users.following)
+    #     ],
+    #     api_key=api_key)
+    #
+    # if not current_user:
+    #     logger.warning(f"Пользователь с API ключом {api_key} не найден.")
+    #     return JSONResponse(status_code=404, content={"error": "User not found"})
     new_tweet_data = {
         "author_id": current_user.id,
         "text": tweet.tweet_data,
@@ -370,7 +401,7 @@ async def add_media(api_key: str = Depends(get_client_token),
 
 @main_router.post("/tweets/{tweet_id}/likes")
 async def add_like(tweet_id: int,
-                    request: Request,
+                    session: AsyncSession = Depends(get_current_session),
                     current_user: Users = Depends(get_current_user)) -> dict:
     """
     Пользователь может поставить отметку «Нравится» на твит по его идентификатору.
@@ -393,7 +424,7 @@ async def add_like(tweet_id: int,
         - 403, если пользователь не аутентифицирован.
         - 404, если твит не найден.
     """
-    session = request.state.session  # Получаем сохраненную сессию
+    # session = request.state.session  # Получаем сохраненную сессию
     tweet = await TweetDAO.find_one_or_none_by_id(tweet_id, session=session)
 
     if not tweet:
@@ -406,7 +437,7 @@ async def add_like(tweet_id: int,
 
 @main_router.post("/users/{user_id}/follow")
 async def follow_user(user_id: int,
-                        request: Request,
+                        session: AsyncSession = Depends(get_current_session),
                         current_user: Users = Depends(get_current_user)) -> dict:
     """
     Пользователь может зафоловить другого пользователя.
@@ -428,7 +459,7 @@ async def follow_user(user_id: int,
         - 404, если указанный пользователь не найден.
         - 409, если пользователь уже подписан на данного пользователя.
     """
-    session = request.state.session  # Получаем сохраненную сессию
+    # session = request.state.session  # Получаем сохраненную сессию
     # Проверяем, существует ли пользователь, на которого подписываются
     followed_user = await UserDAO.find_one_or_none_by_id(user_id, session=session)
 
@@ -453,7 +484,7 @@ async def follow_user(user_id: int,
 
 @main_router.delete("/tweets/{tweet_id}")
 async def delete_tweet(tweet_id: int,
-                        request: Request,
+                        session: AsyncSession = Depends(get_current_session),
                         current_user: Users = Depends(get_current_user)) -> dict:
     """
     Этот эндпоинт позволяет пользователю удалить твит по его идентификатору.
@@ -476,7 +507,7 @@ async def delete_tweet(tweet_id: int,
         - 403, если пользователь не аутентифицирован.
         - 404, если твит не найден или пользователь не имеет прав на его удаление.
     """
-    session = request.state.session  # Получаем сохраненную сессию
+    # session = request.state.session  # Получаем сохраненную сессию
     # Находим твит по идентификатору
     current_tweet = await TweetDAO.find_one_or_none_by_id(tweet_id, session=session)
 
@@ -492,7 +523,7 @@ async def delete_tweet(tweet_id: int,
 
 @main_router.delete("/users/{user_id}/follow")
 async def delete_following(user_id: int,
-                            request: Request,
+                            session: AsyncSession = Depends(get_current_session),
                             current_user: Users = Depends(get_current_user)) -> dict:
     """
     Пользователь может убрать подписку на другого пользователя.
@@ -515,7 +546,7 @@ async def delete_following(user_id: int,
         - 404, если пользователь, от которого отписываются, не найден.
         - 409, если текущий пользователь не подписан на данного пользователя.
     """
-    session = request.state.session  # Получаем сохраненную сессию
+    # session = request.state.session  # Получаем сохраненную сессию
     # Проверяем, существует ли пользователь, от которого отписываются
     followed_user = await UserDAO.find_one_or_none_by_id(user_id, session=session)
 
@@ -540,7 +571,7 @@ async def delete_following(user_id: int,
 
 @main_router.delete("/tweets/{tweet_id}/likes")
 async def delete_like(tweet_id: int,
-                        request: Request,
+                        session: AsyncSession = Depends(get_current_session),
                         current_user: Users = Depends(get_current_user)) -> dict:
     """
     Пользователь может убрать отметку «Нравится» с твита.
@@ -562,7 +593,7 @@ async def delete_like(tweet_id: int,
         - 403, если пользователь не аутентифицирован.
         - 404, если лайк не найден или пользователь не имеет прав на его удаление.
     """
-    session = request.state.session  # Получаем сохраненную сессию
+    # session = request.state.session  # Получаем сохраненную сессию
     # Ищем лайк по идентификатору твита и пользователю
     like = await LikeDAO.find_one_or_none(
         tweet_id=tweet_id,

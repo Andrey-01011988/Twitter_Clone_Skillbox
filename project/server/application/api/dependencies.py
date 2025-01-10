@@ -1,4 +1,5 @@
 import logging
+from typing import Union
 
 from fastapi import Header, HTTPException, Request, Depends
 # from sqlalchemy import delete, and_
@@ -7,6 +8,8 @@ from application.crud import BaseDAO
 from application.database import AsyncSessionApp
 from application.models import Users, Tweets, Media, Like, Followers
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+from starlette.responses import JSONResponse
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -42,10 +45,27 @@ async def get_client_token(session: AsyncSession = Depends(get_current_session),
 
 
 # Зависимость для получения текущего пользователя
-async def get_current_user(request: Request):
-    if not hasattr(request.state, 'current_user'):
-        raise HTTPException(status_code=403, detail="User not authenticated")
-    return request.state.current_user
+# async def get_current_user(request: Request):
+#     if not hasattr(request.state, 'current_user'):
+#         raise HTTPException(status_code=403, detail="User not authenticated")
+#     return request.state.current_user
+
+# Зависимость для получения текущего пользователя
+async def get_current_user(
+        session: AsyncSession = Depends(get_current_session),
+        api_key: str = Depends(get_client_token)
+    ) ->  Union[Users, JSONResponse]:
+    current_user = await UserDAO.find_one_or_none(
+        session=session,
+        options=[
+            selectinload(Users.followers),
+            selectinload(Users.following)
+        ],
+        api_key=api_key)
+    if not current_user:
+        logger.warning(f"Пользователь с API ключом {api_key} не найден.")
+        return JSONResponse(status_code=404, content={"error": "User not found"})
+    return current_user
 
 
 class UserDAO(BaseDAO):

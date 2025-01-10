@@ -1,7 +1,7 @@
 import logging
-from typing import TypeVar, Generic
+from typing import TypeVar, Generic, Any
 
-from sqlalchemy import select, update, delete, and_
+from sqlalchemy import select, update, delete, and_, Result
 from sqlalchemy.exc import SQLAlchemyError
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -54,7 +54,7 @@ class BaseDAO(Generic[T]):
         if options:
             query = query.options(*options)  # Применяем опции к запросу
         async with session:
-            result = await session.execute(query)
+            result: Result[tuple[Any]] = await session.execute(query)
         logger.info("Запрос выполнен")
         return result.scalar_one_or_none()
 
@@ -96,7 +96,7 @@ class BaseDAO(Generic[T]):
             # Применяем сортировку к запросу
             for field in order_by:
                 query = query.order_by(getattr(cls.model, field))
-        async with session.begin():
+        async with session:
             result = await session.execute(query)
         logger.info("Запрос выполнен")
         return result.scalars().all()
@@ -152,10 +152,9 @@ class BaseDAO(Generic[T]):
             raise Exception("Подписка уже существует")
 
         async with session:
-            async with session.begin():
-                new_follow = cls.model(follower_id=follower_id, followed_id=followed_id)
-                session.add(new_follow)
-                await session.commit()
+            new_follow = cls.model(follower_id=follower_id, followed_id=followed_id)
+            session.add(new_follow)
+            await session.commit()
 
     @classmethod
     async def update(cls, session: AsyncSession, instance: T, **values):
@@ -182,7 +181,7 @@ class BaseDAO(Generic[T]):
         )
 
         try:
-            async with session.begin():
+            async with session:
                 await session.execute(stmt)  # Выполняем запрос на обновление
                 await session.commit()  # Сохраняем изменения в базе данных
                 logger.info("Экземпляр успешно обновлен")
@@ -215,7 +214,7 @@ class BaseDAO(Generic[T]):
         )
 
         try:
-            async with session.begin():
+            async with session:
                 await session.execute(query_smt)  # Выполняем запрос на удаление
                 await session.commit()  # Сохраняем изменения в базе данных
                 logger.info("Экземпляр успешно удален")
@@ -235,7 +234,7 @@ class BaseDAO(Generic[T]):
         :param followed_id: Идентификатор пользователя, от которого отписываются.
         """
         async with session:
-            async with session.begin():
+            async with session:
                 await session.execute(
                     delete(cls.model).where(
                         and_(

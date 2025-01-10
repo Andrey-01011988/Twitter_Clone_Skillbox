@@ -59,74 +59,74 @@ async def general_exception_handler(request: Request, exc: Exception):
     )
 
 
-@app_proj.middleware("http")
-async def check_user_middleware(request: Request, call_next):
-    """
-    Middleware для проверки аутентификации пользователя по API ключу.
-
-    Этот middleware проверяет наличие API ключа в заголовках запроса и пытается найти
-    соответствующего пользователя в базе данных. Если пользователь найден, он сохраняется
-    в атрибуте состояния запроса для дальнейшего использования в обработчиках.
-
-    Аргументы:
-        request (Request): Объект запроса FastAPI, содержащий информацию о текущем запросе.
-        call_next (Callable): Функция, которая принимает запрос и возвращает ответ.
-                              Используется для передачи управления следующему обработчику.
-
-    Возвращает:
-        Response: Ответ FastAPI, полученный от следующего обработчика.
-
-    Исключения:
-        Возвращает JSONResponse с кодом 404 и сообщением {"error": "User not found"},
-        если пользователь с указанным API ключом не найден в базе данных.
-
-    Пример использования:
-        Этот middleware автоматически применяется ко всем запросам, начинающимся с "/api",
-        за исключением тех, которые указаны в списке исключений. Например:
-
-        - Запросы к "/api/medias/" не требуют проверки пользователя.
-        - Запросы к "/api/all_users" также не требуют проверки.
-
-    Примечание:
-        Убедитесь, что функция `get_current_session` правильно настроена для получения
-        асинхронной сессии SQLAlchemy, чтобы middleware мог корректно взаимодействовать
-        с базой данных.
-    """
-    logger.info(f"Обрабатываем путь: {request.url.path}")
-    # Определяем список префиксов для исключения
-    excluded_prefixes = ["/api/medias/", "/api/all_users", "/api/add_user", "/api/media"]
-    logger.info("Сравниваем с исключенными префиксами: %s", excluded_prefixes)
-
-    # Проверяем, начинается ли путь с "/api" и не начинается ли он с любого из исключенных префиксов
-    if request.url.path.startswith("/api") and not any(
-            request.url.path.startswith(prefix) for prefix in excluded_prefixes):
-        async for session in get_current_session():
-            logger.info("Путь не исключен из проверки.")
-            request.state.session = session  # Сохраняем сессию в атрибуте запроса
-            logger.info(f"Сохранение сессии в атрибут запроса, session: {session}")
-            api_key = request.headers.get("Api-Key", "test")
-
-            user = await UserDAO.find_one_or_none(
-                session=session,
-                options=[
-                    selectinload(Users.followers),
-                    selectinload(Users.following)
-                ],
-                api_key=api_key
-            )
-
-            if not user:
-                logger.warning(f"Пользователь с API ключом {api_key} не найден.")
-                return JSONResponse(status_code=404, content={"error": "User not found"})
-
-            # Сохраняем пользователя в атрибуте запроса
-            request.state.current_user = user
-            logger.info(f"Пользователь {user} сохранен в запросе")
-    else:
-        logger.info("Путь исключен из проверки.")
-
-    response = await call_next(request)  # Передаем управление следующему обработчику
-    return response
+# @app_proj.middleware("http")
+# async def check_user_middleware(request: Request, call_next):
+#     """
+#     Middleware для проверки аутентификации пользователя по API ключу.
+#
+#     Этот middleware проверяет наличие API ключа в заголовках запроса и пытается найти
+#     соответствующего пользователя в базе данных. Если пользователь найден, он сохраняется
+#     в атрибуте состояния запроса для дальнейшего использования в обработчиках.
+#
+#     Аргументы:
+#         request (Request): Объект запроса FastAPI, содержащий информацию о текущем запросе.
+#         call_next (Callable): Функция, которая принимает запрос и возвращает ответ.
+#                               Используется для передачи управления следующему обработчику.
+#
+#     Возвращает:
+#         Response: Ответ FastAPI, полученный от следующего обработчика.
+#
+#     Исключения:
+#         Возвращает JSONResponse с кодом 404 и сообщением {"error": "User not found"},
+#         если пользователь с указанным API ключом не найден в базе данных.
+#
+#     Пример использования:
+#         Этот middleware автоматически применяется ко всем запросам, начинающимся с "/api",
+#         за исключением тех, которые указаны в списке исключений. Например:
+#
+#         - Запросы к "/api/medias/" не требуют проверки пользователя.
+#         - Запросы к "/api/all_users" также не требуют проверки.
+#
+#     Примечание:
+#         Убедитесь, что функция `get_current_session` правильно настроена для получения
+#         асинхронной сессии SQLAlchemy, чтобы middleware мог корректно взаимодействовать
+#         с базой данных.
+#     """
+#     logger.info(f"Обрабатываем путь: {request.url.path}")
+#     # Определяем список префиксов для исключения
+#     excluded_prefixes = ["/api/medias/", "/api/all_users", "/api/add_user", "/api/media"]
+#     logger.info("Сравниваем с исключенными префиксами: %s", excluded_prefixes)
+#
+#     # Проверяем, начинается ли путь с "/api" и не начинается ли он с любого из исключенных префиксов
+#     if request.url.path.startswith("/api") and not any(
+#             request.url.path.startswith(prefix) for prefix in excluded_prefixes):
+#         async for session in get_current_session():
+#             logger.info("Путь не исключен из проверки.")
+#             request.state.session = session  # Сохраняем сессию в атрибуте запроса
+#             logger.info(f"Сохранение сессии в атрибут запроса, session: {session}")
+#             api_key = request.headers.get("Api-Key", "test")
+#
+#             user = await UserDAO.find_one_or_none(
+#                 session=session,
+#                 options=[
+#                     selectinload(Users.followers),
+#                     selectinload(Users.following)
+#                 ],
+#                 api_key=api_key
+#             )
+#
+#             if not user:
+#                 logger.warning(f"Пользователь с API ключом {api_key} не найден.")
+#                 return JSONResponse(status_code=404, content={"error": "User not found"})
+#
+#             # Сохраняем пользователя в атрибуте запроса
+#             request.state.current_user = user
+#             logger.info(f"Пользователь {user} сохранен в запросе")
+#     else:
+#         logger.info("Путь исключен из проверки.")
+#
+#     response = await call_next(request)  # Передаем управление следующему обработчику
+#     return response
 
 
 @app_proj.get("/welcome")
