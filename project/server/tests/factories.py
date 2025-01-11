@@ -32,17 +32,18 @@ class TweetFactory(factory.alchemy.SQLAlchemyModelFactory):
 
     class Meta:
         model = Tweets
+        sqlalchemy_session = None
 
     text = factory.LazyAttribute(lambda _: fake.sentence(nb_words=5, variable_nb_words=True))  # Генерация текста твита
     author_id = factory.SubFactory(UserFactory)  # Привязка твита к случайному пользователю
 
-    @classmethod
-    def create_tweet(cls, session=None, **kwargs):
-        """Создает твит и добавляет его в указанную сессию."""
-        tweet = cls(**kwargs)
-        if session:
-            session.add(tweet)
-        return tweet
+    # @classmethod
+    # def create_tweet(cls, session=None, **kwargs):
+    #     """Создает твит и добавляет его в указанную сессию."""
+    #     tweet = cls(**kwargs)
+    #     if session:
+    #         session.add(tweet)
+    #     return tweet
 
 
 class LikeFactory(factory.alchemy.SQLAlchemyModelFactory):
@@ -50,17 +51,18 @@ class LikeFactory(factory.alchemy.SQLAlchemyModelFactory):
 
     class Meta:
         model = Like
+        sqlalchemy_session = None
 
     tweet_id = factory.SubFactory(TweetFactory)  # Создание твита, который лайкаем
     user_id = factory.SubFactory(UserFactory)  # Создание пользователя, который ставит лайк
 
-    @classmethod
-    def create_like(cls, session=None, **kwargs):
-        """Создает лайк и добавляет его в указанную сессию."""
-        like = cls(**kwargs)
-        if session:
-            session.add(like)
-        return like
+    # @classmethod
+    # def create_like(cls, session=None, **kwargs):
+    #     """Создает лайк и добавляет его в указанную сессию."""
+    #     like = cls(**kwargs)
+    #     if session:
+    #         session.add(like)
+    #     return like
 
 
 class MediaFactory(factory.alchemy.SQLAlchemyModelFactory):
@@ -68,11 +70,12 @@ class MediaFactory(factory.alchemy.SQLAlchemyModelFactory):
 
     class Meta:
         model = Media
+        sqlalchemy_session = None
 
     @factory.lazy_attribute
     def file_body(self):
         """Загрузка изображения из файла."""
-        image_directory = '/server/tests/images'  # Замените на путь к вашей директории с изображениями
+        image_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), '../tests/images'))
         image_files = os.listdir(image_directory)
 
         # Выбор случайного изображения из директории
@@ -85,16 +88,22 @@ class MediaFactory(factory.alchemy.SQLAlchemyModelFactory):
         with open(image_path, 'rb') as f:
             return f.read()  # Возвращаем бинарные данные изображения
 
-    file_name = factory.LazyAttribute(lambda obj: os.path.basename(obj.file_body))  # Имя файла медиа
+    @factory.lazy_attribute
+    def file_name(self):
+        """Имя файла медиа."""
+        image_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), '../tests/images'))
+        selected_image = fake.random_element(os.listdir(image_directory))
+        return selected_image  # Возвращаем имя файла
+
     tweet_id = factory.SubFactory(TweetFactory)  # Привязываем медиа к твиту
 
-    @classmethod
-    def create_media(cls, session=None, **kwargs):
-        """Создает медиафайл и добавляет его в указанную сессию."""
-        media = cls(**kwargs)
-        if session:
-            session.add(media)
-        return media
+    # @classmethod
+    # def create_media(cls, session=None, **kwargs):
+    #     """Создает медиафайл и добавляет его в указанную сессию."""
+    #     media = cls(**kwargs)
+    #     if session:
+    #         session.add(media)
+    #     return media
 
 
 class FollowerFactory(factory.alchemy.SQLAlchemyModelFactory):
@@ -102,14 +111,15 @@ class FollowerFactory(factory.alchemy.SQLAlchemyModelFactory):
 
     class Meta:
         model = Followers
+        sqlalchemy_session = None
 
     follower_id = factory.SubFactory(UserFactory)  # Создание пользователя, который подписывается
     followed_id = factory.SubFactory(UserFactory)  # Создание пользователя, на которого подписываются
 
-    @classmethod
-    def create_follower(cls, session=None, **kwargs):
-        """Создает подписку и добавляет ее в указанную сессию."""
-        follower = cls(**kwargs)
-        if session:
-            session.add(follower)
-        return follower
+    # @classmethod
+    # def create_follower(cls, session=None, **kwargs):
+    #     """Создает подписку и добавляет ее в указанную сессию."""
+    #     follower = cls(**kwargs)
+    #     if session:
+    #         session.add(follower)
+    #     return follower
