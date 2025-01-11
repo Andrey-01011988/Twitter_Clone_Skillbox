@@ -1,0 +1,614 @@
+Settings:
+
+import logging
+
+import pytest
+from httpx import AsyncClient, ASGITransport
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from application.api.dependencies import get_current_session
+from application.main import app_proj
+from application.models import BaseProj
+
+from tests.test_database import test_engine, AsyncSessionTest
+from tests.factories import UserFactory, TweetFactory, LikeFactory, MediaFactory, FollowerFactory  # Импортируйте фабрики
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+# Назначение текущей сессии
+async def override_get_session() -> AsyncSession:
+    logger.info("Создание тестовой сессии Dependencies")
+    async with AsyncSessionTest() as current_session:
+        try:
+            yield current_session
+        finally:
+            await current_session.close()
+            logger.info("Закрытие тестовой сессии Dependencies")
+
+app_proj.dependency_overrides[get_current_session] = override_get_session
+
+
+@pytest.fixture(scope="function")
+async def setup_database():
+    print("Запуск фикстуры")
+    async with test_engine.begin() as conn:
+        print("Начало")
+        await conn.run_sync(BaseProj.metadata.create_all)
+        print("Тестовая б/д создана")
+
+    async with AsyncSessionTest() as test_session:
+        print("Создание новой тестовой сессии")
+        users = []
+        print(f"Текущая сессия: {test_session}")
+        # Логирование информации о подключении
+        connection_info = test_session.bind.url
+        print(f"Подключение к базе данных: {connection_info}")
+        UserFactory._meta.sqlalchemy_session = test_session
+        for i in range(3):
+            if i == 0:
+                user = UserFactory(api_key='test')
+            else:
+                user = UserFactory()
+            users.append(user)
+        test_session.add_all(users)
+        await test_session.commit()
+
+        yield test_session  # Передаем сессию в тесты
+
+    async with test_engine.begin() as conn:
+        await conn.run_sync(BaseProj.metadata.drop_all)
+
+
+@pytest.mark.asyncio
+async def test_all_users(setup_database):
+    async with AsyncClient(
+            transport=ASGITransport(app=app_proj),
+            base_url="http://server:5000") as ac:
+        response = await ac.get("/api/all_users")
+    assert response.status_code == 200
+    assert len(response.json()) > 0
+
+
+# pytest -v tests/test_application_ai.py
+
+-------------------------------------------------------------------------------------------------------------------------
+
+ERROR
+
+(ubuntuenv) uservm@uservm-VirtualBox:~/PycharmProjects/python_advanced_diploma/project$ docker exec -it project_server_1 /bin/sh
+# pytest -v tests/test_application_ai.py
+=================================================================================================== test session starts ===================================================================================================
+platform linux -- Python 3.11.11, pytest-8.3.3, pluggy-1.5.0 -- /usr/local/bin/python3.11
+cachedir: .pytest_cache
+rootdir: /server/tests
+configfile: pytest.ini
+plugins: asyncio-0.24.0, Faker-30.8.2, anyio-4.6.2.post1
+asyncio: mode=Mode.AUTO, default_loop_scope=module
+collected 1 item
+
+tests/test_application_ai.py::test_all_users FAILED                                                                                                                                                                 [100%]
+
+======================================================================================================== FAILURES =========================================================================================================
+_____________________________________________________________________________________________________ test_all_users ______________________________________________________________________________________________________
+  + Exception Group Traceback (most recent call last):
+  |   File "/usr/local/lib/python3.11/site-packages/starlette/_utils.py", line 76, in collapse_excgroups
+  |     yield
+  |   File "/usr/local/lib/python3.11/site-packages/starlette/middleware/base.py", line 186, in __call__
+  |     async with anyio.create_task_group() as task_group:
+  |   File "/usr/local/lib/python3.11/site-packages/anyio/_backends/_asyncio.py", line 763, in __aexit__
+  |     raise BaseExceptionGroup(
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "/usr/local/lib/python3.11/site-packages/_pytest/runner.py", line 341, in from_call
+    |     result: TResult | None = func()
+    |                              ^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/_pytest/runner.py", line 242, in <lambda>
+    |     lambda: runtest_hook(item=item, **kwds), when=when, reraise=reraise
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/pluggy/_hooks.py", line 513, in __call__
+    |     return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/pluggy/_manager.py", line 120, in _hookexec
+    |     return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/pluggy/_callers.py", line 139, in _multicall
+    |     raise exception.with_traceback(exception.__traceback__)
+    |   File "/usr/local/lib/python3.11/site-packages/pluggy/_callers.py", line 122, in _multicall
+    |     teardown.throw(exception)  # type: ignore[union-attr]
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/_pytest/threadexception.py", line 92, in pytest_runtest_call
+    |     yield from thread_exception_runtest_hook()
+    |   File "/usr/local/lib/python3.11/site-packages/_pytest/threadexception.py", line 68, in thread_exception_runtest_hook
+    |     yield
+    |   File "/usr/local/lib/python3.11/site-packages/pluggy/_callers.py", line 122, in _multicall
+    |     teardown.throw(exception)  # type: ignore[union-attr]
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/_pytest/unraisableexception.py", line 95, in pytest_runtest_call
+    |     yield from unraisable_exception_runtest_hook()
+    |   File "/usr/local/lib/python3.11/site-packages/_pytest/unraisableexception.py", line 70, in unraisable_exception_runtest_hook
+    |     yield
+    |   File "/usr/local/lib/python3.11/site-packages/pluggy/_callers.py", line 122, in _multicall
+    |     teardown.throw(exception)  # type: ignore[union-attr]
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/_pytest/logging.py", line 846, in pytest_runtest_call
+    |     yield from self._runtest_for(item, "call")
+    |   File "/usr/local/lib/python3.11/site-packages/_pytest/logging.py", line 829, in _runtest_for
+    |     yield
+    |   File "/usr/local/lib/python3.11/site-packages/pluggy/_callers.py", line 122, in _multicall
+    |     teardown.throw(exception)  # type: ignore[union-attr]
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/_pytest/capture.py", line 880, in pytest_runtest_call
+    |     return (yield)
+    |             ^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/pluggy/_callers.py", line 122, in _multicall
+    |     teardown.throw(exception)  # type: ignore[union-attr]
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/_pytest/skipping.py", line 257, in pytest_runtest_call
+    |     return (yield)
+    |             ^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/pluggy/_callers.py", line 103, in _multicall
+    |     res = hook_impl.function(*args)
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/_pytest/runner.py", line 174, in pytest_runtest_call
+    |     item.runtest()
+    |   File "/usr/local/lib/python3.11/site-packages/pytest_asyncio/plugin.py", line 457, in runtest
+    |     super().runtest()
+    |   File "/usr/local/lib/python3.11/site-packages/_pytest/python.py", line 1627, in runtest
+    |     self.ihook.pytest_pyfunc_call(pyfuncitem=self)
+    |   File "/usr/local/lib/python3.11/site-packages/pluggy/_hooks.py", line 513, in __call__
+    |     return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/pluggy/_manager.py", line 120, in _hookexec
+    |     return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/pluggy/_callers.py", line 182, in _multicall
+    |     return outcome.get_result()
+    |            ^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/pluggy/_result.py", line 100, in get_result
+    |     raise exc.with_traceback(exc.__traceback__)
+    |   File "/usr/local/lib/python3.11/site-packages/pluggy/_callers.py", line 103, in _multicall
+    |     res = hook_impl.function(*args)
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/_pytest/python.py", line 159, in pytest_pyfunc_call
+    |     result = testfunction(**testargs)
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/pytest_asyncio/plugin.py", line 929, in inner
+    |     _loop.run_until_complete(task)
+    |   File "/usr/local/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+    |     return future.result()
+    |            ^^^^^^^^^^^^^^^
+    |   File "/server/tests/test_application_ai.py", line 68, in test_all_users
+    |     response = await ac.get("/api/all_users")
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1814, in get
+    |     return await self.request(
+    |            ^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1585, in request
+    |     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1674, in send
+    |     response = await self._send_handling_auth(
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1702, in _send_handling_auth
+    |     response = await self._send_handling_redirects(
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1739, in _send_handling_redirects
+    |     response = await self._send_single_request(request)
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/httpx/_client.py", line 1776, in _send_single_request
+    |     response = await transport.handle_async_request(request)
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/httpx/_transports/asgi.py", line 157, in handle_async_request
+    |     await self.app(scope, receive, send)
+    |   File "/usr/local/lib/python3.11/site-packages/fastapi/applications.py", line 1054, in __call__
+    |     await super().__call__(scope, receive, send)
+    |   File "/usr/local/lib/python3.11/site-packages/starlette/applications.py", line 113, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "/usr/local/lib/python3.11/site-packages/starlette/middleware/errors.py", line 187, in __call__
+    |     raise exc
+    |   File "/usr/local/lib/python3.11/site-packages/starlette/middleware/errors.py", line 165, in __call__
+    |     await self.app(scope, receive, _send)
+    |   File "/usr/local/lib/python3.11/site-packages/starlette/middleware/base.py", line 185, in __call__
+    |     with collapse_excgroups():
+    |   File "/usr/local/lib/python3.11/contextlib.py", line 158, in __exit__
+    |     self.gen.throw(typ, value, traceback)
+    |   File "/usr/local/lib/python3.11/site-packages/starlette/_utils.py", line 82, in collapse_excgroups
+    |     raise exc
+    |   File "/usr/local/lib/python3.11/site-packages/starlette/middleware/base.py", line 187, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/server/application/main.py", line 111, in check_user_middleware
+    |     response = await call_next(request)  # Передаем управление следующему обработчику
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/starlette/middleware/base.py", line 163, in call_next
+    |     raise app_exc
+    |   File "/usr/local/lib/python3.11/site-packages/starlette/middleware/base.py", line 149, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "/usr/local/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 62, in __call__
+    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+    |   File "/usr/local/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "/usr/local/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "/usr/local/lib/python3.11/site-packages/starlette/routing.py", line 715, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "/usr/local/lib/python3.11/site-packages/starlette/routing.py", line 735, in app
+    |     await route.handle(scope, receive, send)
+    |   File "/usr/local/lib/python3.11/site-packages/starlette/routing.py", line 288, in handle
+    |     await self.app(scope, receive, send)
+    |   File "/usr/local/lib/python3.11/site-packages/starlette/routing.py", line 76, in app
+    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+    |   File "/usr/local/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "/usr/local/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "/usr/local/lib/python3.11/site-packages/starlette/routing.py", line 73, in app
+    |     response = await f(request)
+    |                ^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/fastapi/routing.py", line 301, in app
+    |     raw_response = await run_endpoint_function(
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/fastapi/routing.py", line 212, in run_endpoint_function
+    |     return await dependant.call(**values)
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/server/application/api/endpoints.py", line 38, in get_all_users
+    |     result = await UserDAO.find_all(session=session)
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/server/application/crud.py", line 100, in find_all
+    |     result = await session.execute(query)
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/ext/asyncio/session.py", line 461, in execute
+    |     result = await greenlet_spawn(
+    |              ^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 201, in greenlet_spawn
+    |     result = context.throw(*sys.exc_info())
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2362, in execute
+    |     return self._execute_internal(
+    |            ^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2247, in _execute_internal
+    |     result: Result[Any] = compile_state_cls.orm_execute_statement(
+    |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 305, in orm_execute_statement
+    |     result = conn.execute(
+    |              ^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1418, in execute
+    |     return meth(
+    |            ^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 515, in _execute_on_connection
+    |     return connection._execute_clauseelement(
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1640, in _execute_clauseelement
+    |     ret = self._execute_context(
+    |           ^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    |     return self._exec_single_context(
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    |     self._handle_dbapi_exception(
+    |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2358, in _handle_dbapi_exception
+    |     raise exc_info[1].with_traceback(exc_info[2])
+    |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    |     self.dialect.do_execute(
+    |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    |     cursor.execute(statement, parameters)
+    |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 568, in execute
+    |     self._adapt_connection.await_(
+    |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+    |     return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+    |     value = await result
+    |             ^^^^^^^^^^^^
+    |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 504, in _prepare_and_execute
+    |     await adapt_connection._start_transaction()
+    |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 833, in _start_transaction
+    |     self._handle_exception(error)
+    |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 782, in _handle_exception
+    |     raise error
+    |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 831, in _start_transaction
+    |     await self._transaction.start()
+    |   File "/usr/local/lib/python3.11/site-packages/asyncpg/transaction.py", line 146, in start
+    |     await self._connection.execute(query)
+    |   File "/usr/local/lib/python3.11/site-packages/asyncpg/connection.py", line 349, in execute
+    |     result = await self._protocol.query(query, timeout)
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "asyncpg/protocol/protocol.pyx", line 375, in query
+    | RuntimeError: Task <Task pending name='starlette.middleware.base.BaseHTTPMiddleware.__call__.<locals>.call_next.<locals>.coro' coro=<BaseHTTPMiddleware.__call__.<locals>.call_next.<locals>.coro() running at /usr/local/lib/python3.11/site-packages/starlette/middleware/base.py:149> cb=[TaskGroup._spawn.<locals>.task_done() at /usr/local/lib/python3.11/site-packages/anyio/_backends/_asyncio.py:785]> got Future <Future pending cb=[BaseProtocol._on_waiter_completed()]> attached to a different loop
+    +------------------------------------
+
+During handling of the above exception, another exception occurred:
+
+setup_database = <sqlalchemy.ext.asyncio.session.AsyncSession object at 0x77369ffd8090>
+
+    @pytest.mark.asyncio
+    async def test_all_users(setup_database):
+        async with AsyncClient(
+                transport=ASGITransport(app=app_proj),
+                base_url="http://server:5000") as ac:
+>           response = await ac.get("/api/all_users")
+
+tests/test_application_ai.py:68:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+/usr/local/lib/python3.11/site-packages/httpx/_client.py:1814: in get
+    return await self.request(
+/usr/local/lib/python3.11/site-packages/httpx/_client.py:1585: in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+/usr/local/lib/python3.11/site-packages/httpx/_client.py:1674: in send
+    response = await self._send_handling_auth(
+/usr/local/lib/python3.11/site-packages/httpx/_client.py:1702: in _send_handling_auth
+    response = await self._send_handling_redirects(
+/usr/local/lib/python3.11/site-packages/httpx/_client.py:1739: in _send_handling_redirects
+    response = await self._send_single_request(request)
+/usr/local/lib/python3.11/site-packages/httpx/_client.py:1776: in _send_single_request
+    response = await transport.handle_async_request(request)
+/usr/local/lib/python3.11/site-packages/httpx/_transports/asgi.py:157: in handle_async_request
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.11/site-packages/fastapi/applications.py:1054: in __call__
+    await super().__call__(scope, receive, send)
+/usr/local/lib/python3.11/site-packages/starlette/applications.py:113: in __call__
+    await self.middleware_stack(scope, receive, send)
+/usr/local/lib/python3.11/site-packages/starlette/middleware/errors.py:187: in __call__
+    raise exc
+/usr/local/lib/python3.11/site-packages/starlette/middleware/errors.py:165: in __call__
+    await self.app(scope, receive, _send)
+/usr/local/lib/python3.11/site-packages/starlette/middleware/base.py:185: in __call__
+    with collapse_excgroups():
+/usr/local/lib/python3.11/contextlib.py:158: in __exit__
+    self.gen.throw(typ, value, traceback)
+/usr/local/lib/python3.11/site-packages/starlette/_utils.py:82: in collapse_excgroups
+    raise exc
+/usr/local/lib/python3.11/site-packages/starlette/middleware/base.py:187: in __call__
+    response = await self.dispatch_func(request, call_next)
+application/main.py:111: in check_user_middleware
+    response = await call_next(request)  # Передаем управление следующему обработчику
+/usr/local/lib/python3.11/site-packages/starlette/middleware/base.py:163: in call_next
+    raise app_exc
+/usr/local/lib/python3.11/site-packages/starlette/middleware/base.py:149: in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+/usr/local/lib/python3.11/site-packages/starlette/middleware/exceptions.py:62: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+/usr/local/lib/python3.11/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+/usr/local/lib/python3.11/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+/usr/local/lib/python3.11/site-packages/starlette/routing.py:715: in __call__
+    await self.middleware_stack(scope, receive, send)
+/usr/local/lib/python3.11/site-packages/starlette/routing.py:735: in app
+    await route.handle(scope, receive, send)
+/usr/local/lib/python3.11/site-packages/starlette/routing.py:288: in handle
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.11/site-packages/starlette/routing.py:76: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+/usr/local/lib/python3.11/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+/usr/local/lib/python3.11/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+/usr/local/lib/python3.11/site-packages/starlette/routing.py:73: in app
+    response = await f(request)
+/usr/local/lib/python3.11/site-packages/fastapi/routing.py:301: in app
+    raw_response = await run_endpoint_function(
+/usr/local/lib/python3.11/site-packages/fastapi/routing.py:212: in run_endpoint_function
+    return await dependant.call(**values)
+application/api/endpoints.py:38: in get_all_users
+    result = await UserDAO.find_all(session=session)
+application/crud.py:100: in find_all
+    result = await session.execute(query)
+/usr/local/lib/python3.11/site-packages/sqlalchemy/ext/asyncio/session.py:461: in execute
+    result = await greenlet_spawn(
+/usr/local/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py:201: in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/session.py:2362: in execute
+    return self._execute_internal(
+/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/session.py:2247: in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/context.py:305: in orm_execute_statement
+    result = conn.execute(
+/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1418: in execute
+    return meth(
+/usr/local/lib/python3.11/site-packages/sqlalchemy/sql/elements.py:515: in _execute_on_connection
+    return connection._execute_clauseelement(
+/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1640: in _execute_clauseelement
+    ret = self._execute_context(
+/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1846: in _execute_context
+    return self._exec_single_context(
+/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py:2358: in _handle_dbapi_exception
+    raise exc_info[1].with_traceback(exc_info[2])
+/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/default.py:941: in do_execute
+    cursor.execute(statement, parameters)
+/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:568: in execute
+    self._adapt_connection.await_(
+/usr/local/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py:132: in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+/usr/local/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py:196: in greenlet_spawn
+    value = await result
+/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:504: in _prepare_and_execute
+    await adapt_connection._start_transaction()
+/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:833: in _start_transaction
+    self._handle_exception(error)
+/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:782: in _handle_exception
+    raise error
+/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:831: in _start_transaction
+    await self._transaction.start()
+/usr/local/lib/python3.11/site-packages/asyncpg/transaction.py:146: in start
+    await self._connection.execute(query)
+/usr/local/lib/python3.11/site-packages/asyncpg/connection.py:349: in execute
+    result = await self._protocol.query(query, timeout)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+>   ???
+E   RuntimeError: Task <Task pending name='starlette.middleware.base.BaseHTTPMiddleware.__call__.<locals>.call_next.<locals>.coro' coro=<BaseHTTPMiddleware.__call__.<locals>.call_next.<locals>.coro() running at /usr/local/lib/python3.11/site-packages/starlette/middleware/base.py:149> cb=[TaskGroup._spawn.<locals>.task_done() at /usr/local/lib/python3.11/site-packages/anyio/_backends/_asyncio.py:785]> got Future <Future pending cb=[BaseProtocol._on_waiter_completed()]> attached to a different loop
+
+asyncpg/protocol/protocol.pyx:375: RuntimeError
+-------------------------------------------------------------------------------------------------- Captured stdout setup --------------------------------------------------------------------------------------------------
+Запуск фикстуры
+2024-12-25 09:30:31,459 INFO sqlalchemy.engine.Engine select pg_catalog.version()
+2024-12-25 09:30:31,459 INFO sqlalchemy.engine.Engine [raw sql] ()
+2024-12-25 09:30:31,461 INFO sqlalchemy.engine.Engine select current_schema()
+2024-12-25 09:30:31,461 INFO sqlalchemy.engine.Engine [raw sql] ()
+2024-12-25 09:30:31,463 INFO sqlalchemy.engine.Engine show standard_conforming_strings
+2024-12-25 09:30:31,463 INFO sqlalchemy.engine.Engine [raw sql] ()
+2024-12-25 09:30:31,464 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+Начало
+2024-12-25 09:30:31,467 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2024-12-25 09:30:31,467 INFO sqlalchemy.engine.Engine [generated in 0.00021s] ('followers', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2024-12-25 09:30:31,475 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2024-12-25 09:30:31,475 INFO sqlalchemy.engine.Engine [cached since 0.008285s ago] ('users', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2024-12-25 09:30:31,476 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2024-12-25 09:30:31,476 INFO sqlalchemy.engine.Engine [cached since 0.00899s ago] ('tweets', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2024-12-25 09:30:31,476 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2024-12-25 09:30:31,476 INFO sqlalchemy.engine.Engine [cached since 0.009576s ago] ('likes', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2024-12-25 09:30:31,477 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2024-12-25 09:30:31,477 INFO sqlalchemy.engine.Engine [cached since 0.01009s ago] ('media', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+Тестовая б/д создана
+2024-12-25 09:30:31,477 INFO sqlalchemy.engine.Engine COMMIT
+Создание новой тестовой сессии
+Текущая сессия: <sqlalchemy.ext.asyncio.session.AsyncSession object at 0x77369ffd8090>
+Подключение к базе данных: postgresql+asyncpg://test:***@test_postgres_container:5432/test_twitter
+2024-12-25 09:30:31,487 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2024-12-25 09:30:31,488 INFO sqlalchemy.engine.Engine INSERT INTO users (name, api_key) SELECT p0::VARCHAR, p1::VARCHAR FROM (VALUES ($1::VARCHAR, $2::VARCHAR, 0), ($3::VARCHAR, $4::VARCHAR, 1), ($5::VARCHAR, $6::VARCHAR, 2)) AS imp_sen(p0, p1, sen_counter) ORDER BY sen_counter RETURNING users.id, users.id AS id__1
+2024-12-25 09:30:31,489 INFO sqlalchemy.engine.Engine [generated in 0.00007s (insertmanyvalues) 1/1 (ordered)] ('Зыкова Таисия Васильевна', 'test', 'Михаил Игнатьевич Некрасов', 'Sz589J65', 'Эраст Харлампьевич Маслов', 'lM700R89')
+2024-12-25 09:30:31,496 INFO sqlalchemy.engine.Engine COMMIT
+--------------------------------------------------------------------------------------------------- Captured log setup ----------------------------------------------------------------------------------------------------
+INFO     sqlalchemy.engine.Engine:base.py:1846 select pg_catalog.version()
+INFO     sqlalchemy.engine.Engine:base.py:1846 [raw sql] ()
+INFO     sqlalchemy.engine.Engine:base.py:1846 select current_schema()
+INFO     sqlalchemy.engine.Engine:base.py:1846 [raw sql] ()
+INFO     sqlalchemy.engine.Engine:base.py:1846 show standard_conforming_strings
+INFO     sqlalchemy.engine.Engine:base.py:1846 [raw sql] ()
+INFO     sqlalchemy.engine.Engine:base.py:2701 BEGIN (implicit)
+INFO     sqlalchemy.engine.Engine:base.py:1846 SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+INFO     sqlalchemy.engine.Engine:base.py:1846 [generated in 0.00021s] ('followers', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+INFO     sqlalchemy.engine.Engine:base.py:1846 SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+INFO     sqlalchemy.engine.Engine:base.py:1846 [cached since 0.008285s ago] ('users', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+INFO     sqlalchemy.engine.Engine:base.py:1846 SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+INFO     sqlalchemy.engine.Engine:base.py:1846 [cached since 0.00899s ago] ('tweets', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+INFO     sqlalchemy.engine.Engine:base.py:1846 SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+INFO     sqlalchemy.engine.Engine:base.py:1846 [cached since 0.009576s ago] ('likes', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+INFO     sqlalchemy.engine.Engine:base.py:1846 SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+INFO     sqlalchemy.engine.Engine:base.py:1846 [cached since 0.01009s ago] ('media', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+INFO     sqlalchemy.engine.Engine:base.py:2707 COMMIT
+INFO     sqlalchemy.engine.Engine:base.py:2701 BEGIN (implicit)
+INFO     sqlalchemy.engine.Engine:base.py:1844 INSERT INTO users (name, api_key) SELECT p0::VARCHAR, p1::VARCHAR FROM (VALUES ($1::VARCHAR, $2::VARCHAR, 0), ($3::VARCHAR, $4::VARCHAR, 1), ($5::VARCHAR, $6::VARCHAR, 2)) AS imp_sen(p0, p1, sen_counter) ORDER BY sen_counter RETURNING users.id, users.id AS id__1
+INFO     sqlalchemy.engine.Engine:base.py:1844 [generated in 0.00007s (insertmanyvalues) 1/1 (ordered)] ('Зыкова Таисия Васильевна', 'test', 'Михаил Игнатьевич Некрасов', 'Sz589J65', 'Эраст Харлампьевич Маслов', 'lM700R89')
+INFO     sqlalchemy.engine.Engine:base.py:2707 COMMIT
+-------------------------------------------------------------------------------------------------- Captured stdout call ---------------------------------------------------------------------------------------------------
+2024-12-25 09:30:31,543 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2024-12-25 09:30:31,544 INFO sqlalchemy.engine.Engine SELECT users.id, users.name, users.api_key
+FROM users
+2024-12-25 09:30:31,544 INFO sqlalchemy.engine.Engine [generated in 0.00020s] ()
+2024-12-25 09:30:31,546 INFO sqlalchemy.engine.Engine ROLLBACK
+---------------------------------------------------------------------------------------------------- Captured log call ----------------------------------------------------------------------------------------------------
+INFO     sqlalchemy.engine.Engine:base.py:2701 BEGIN (implicit)
+INFO     sqlalchemy.engine.Engine:base.py:1846 SELECT users.id, users.name, users.api_key
+FROM users
+INFO     sqlalchemy.engine.Engine:base.py:1846 [generated in 0.00020s] ()
+INFO     sqlalchemy.engine.Engine:base.py:2704 ROLLBACK
+------------------------------------------------------------------------------------------------ Captured stdout teardown -------------------------------------------------------------------------------------------------
+2024-12-25 09:30:32,154 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2024-12-25 09:30:32,154 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2024-12-25 09:30:32,155 INFO sqlalchemy.engine.Engine [cached since 0.6879s ago] ('followers', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2024-12-25 09:30:32,156 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2024-12-25 09:30:32,156 INFO sqlalchemy.engine.Engine [cached since 0.6895s ago] ('users', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2024-12-25 09:30:32,157 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2024-12-25 09:30:32,157 INFO sqlalchemy.engine.Engine [cached since 0.6901s ago] ('tweets', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2024-12-25 09:30:32,157 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2024-12-25 09:30:32,157 INFO sqlalchemy.engine.Engine [cached since 0.6907s ago] ('likes', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2024-12-25 09:30:32,158 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2024-12-25 09:30:32,158 INFO sqlalchemy.engine.Engine [cached since 0.6912s ago] ('media', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2024-12-25 09:30:32,158 INFO sqlalchemy.engine.Engine
+DROP TABLE media
+2024-12-25 09:30:32,158 INFO sqlalchemy.engine.Engine [no key 0.00011s] ()
+2024-12-25 09:30:32,170 INFO sqlalchemy.engine.Engine
+DROP TABLE likes
+2024-12-25 09:30:32,170 INFO sqlalchemy.engine.Engine [no key 0.00021s] ()
+2024-12-25 09:30:32,172 INFO sqlalchemy.engine.Engine
+DROP TABLE tweets
+2024-12-25 09:30:32,172 INFO sqlalchemy.engine.Engine [no key 0.00016s] ()
+2024-12-25 09:30:32,176 INFO sqlalchemy.engine.Engine
+DROP TABLE followers
+2024-12-25 09:30:32,176 INFO sqlalchemy.engine.Engine [no key 0.00023s] ()
+2024-12-25 09:30:32,178 INFO sqlalchemy.engine.Engine
+DROP TABLE users
+2024-12-25 09:30:32,178 INFO sqlalchemy.engine.Engine [no key 0.00014s] ()
+2024-12-25 09:30:32,180 INFO sqlalchemy.engine.Engine COMMIT
+-------------------------------------------------------------------------------------------------- Captured log teardown --------------------------------------------------------------------------------------------------
+INFO     sqlalchemy.engine.Engine:base.py:2701 BEGIN (implicit)
+INFO     sqlalchemy.engine.Engine:base.py:1846 SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+INFO     sqlalchemy.engine.Engine:base.py:1846 [cached since 0.6879s ago] ('followers', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+INFO     sqlalchemy.engine.Engine:base.py:1846 SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+INFO     sqlalchemy.engine.Engine:base.py:1846 [cached since 0.6895s ago] ('users', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+INFO     sqlalchemy.engine.Engine:base.py:1846 SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+INFO     sqlalchemy.engine.Engine:base.py:1846 [cached since 0.6901s ago] ('tweets', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+INFO     sqlalchemy.engine.Engine:base.py:1846 SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+INFO     sqlalchemy.engine.Engine:base.py:1846 [cached since 0.6907s ago] ('likes', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+INFO     sqlalchemy.engine.Engine:base.py:1846 SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+INFO     sqlalchemy.engine.Engine:base.py:1846 [cached since 0.6912s ago] ('media', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+INFO     sqlalchemy.engine.Engine:base.py:1846
+DROP TABLE media
+INFO     sqlalchemy.engine.Engine:base.py:1846 [no key 0.00011s] ()
+INFO     sqlalchemy.engine.Engine:base.py:1846
+DROP TABLE likes
+INFO     sqlalchemy.engine.Engine:base.py:1846 [no key 0.00021s] ()
+INFO     sqlalchemy.engine.Engine:base.py:1846
+DROP TABLE tweets
+INFO     sqlalchemy.engine.Engine:base.py:1846 [no key 0.00016s] ()
+INFO     sqlalchemy.engine.Engine:base.py:1846
+DROP TABLE followers
+INFO     sqlalchemy.engine.Engine:base.py:1846 [no key 0.00023s] ()
+INFO     sqlalchemy.engine.Engine:base.py:1846
+DROP TABLE users
+INFO     sqlalchemy.engine.Engine:base.py:1846 [no key 0.00014s] ()
+INFO     sqlalchemy.engine.Engine:base.py:2707 COMMIT
+================================================================================================= short test summary info =================================================================================================
+FAILED tests/test_application_ai.py::test_all_users - RuntimeError: Task <Task pending name='starlette.middleware.base.BaseHTTPMiddleware.__call__.<locals>.call_next.<locals>.coro' coro=<BaseHTTPMiddleware.__call__.<locals>.call_next.<locals>.coro() running at /usr/lo...
+==================================================================================================== 1 failed in 1.71s ====================================================================================================
+#

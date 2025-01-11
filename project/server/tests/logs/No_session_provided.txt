@@ -1,0 +1,346 @@
+# (ubuntuenv) uservm@uservm-VirtualBox:~/PycharmProjects/python_advanced_diploma/project$ docker exec -it project_server_1 /bin/sh
+# pytest -v tests/test_application.py
+=================================================================================================== test session starts ===================================================================================================
+platform linux -- Python 3.11.11, pytest-8.3.3, pluggy-1.5.0 -- /usr/local/bin/python3.11
+cachedir: .pytest_cache
+rootdir: /server/tests
+configfile: pytest.ini
+plugins: asyncio-0.24.0, Faker-30.8.2, anyio-4.6.2.post1
+asyncio: mode=Mode.AUTO, default_loop_scope=module
+collected 1 item
+
+tests/test_application.py::test_all_users ERROR                                                                                                                                                                     [100%]
+
+========================================================================================================= ERRORS ==========================================================================================================
+____________________________________________________________________________________________ ERROR at setup of test_all_users _____________________________________________________________________________________________
+
+    @pytest.fixture(scope="module")
+    async def setup_database():
+        print("Запуск фикстуры")
+        async with test_engine.begin() as conn:
+            print("Начало")
+            await conn.run_sync(BaseProj.metadata.create_all)
+            print("Тестовая б/д создана")
+
+        # Создаем сессию вне контекстного менеджера
+        test_session = AsyncSessionTest()
+        try:
+            logger.info("Создание новой тестовой сессии")
+            users = []
+            logger.info(f"Текущая сессия: {test_session}")
+
+            # Создание пользователей
+            for i in range(3):
+                if i == 0:
+>                   user = UserFactory.create_user(session=test_session, api_key='test')
+
+tests/test_application.py:60:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/factories.py:23: in create_user
+    user = cls(**kwargs)  # Создаем объект пользователя
+/usr/local/lib/python3.11/site-packages/factory/base.py:43: in __call__
+    return cls.create(**kwargs)
+/usr/local/lib/python3.11/site-packages/factory/base.py:539: in create
+    return cls._generate(enums.CREATE_STRATEGY, kwargs)
+/usr/local/lib/python3.11/site-packages/factory/alchemy.py:60: in _generate
+    return super()._generate(strategy, params)
+/usr/local/lib/python3.11/site-packages/factory/base.py:468: in _generate
+    return step.build()
+/usr/local/lib/python3.11/site-packages/factory/builder.py:274: in build
+    instance = self.factory_meta.instantiate(
+/usr/local/lib/python3.11/site-packages/factory/base.py:320: in instantiate
+    return self.factory._create(model, *args, **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+cls = <class 'tests.factories.UserFactory'>, model_class = <class 'application.models.Users'>, args = (), kwargs = {'api_key': 'test', 'name': 'Горбачева Акулина Богдановна'}, session_factory = None, session = None
+
+    @classmethod
+    def _create(cls, model_class, *args, **kwargs):
+        """Create an instance of the model, and save it to the database."""
+        session_factory = cls._meta.sqlalchemy_session_factory
+        if session_factory:
+            cls._meta.sqlalchemy_session = session_factory()
+
+        session = cls._meta.sqlalchemy_session
+
+        if session is None:
+>           raise RuntimeError("No session provided.")
+E           RuntimeError: No session provided.
+
+/usr/local/lib/python3.11/site-packages/factory/alchemy.py:113: RuntimeError
+-------------------------------------------------------------------------------------------------- Captured stdout setup --------------------------------------------------------------------------------------------------
+Запуск фикстуры
+2024-12-23 15:07:51,685 INFO sqlalchemy.engine.Engine select pg_catalog.version()
+2024-12-23 15:07:51,685 INFO sqlalchemy.engine.Engine [raw sql] ()
+2024-12-23 15:07:51,687 INFO sqlalchemy.engine.Engine select current_schema()
+2024-12-23 15:07:51,687 INFO sqlalchemy.engine.Engine [raw sql] ()
+2024-12-23 15:07:51,689 INFO sqlalchemy.engine.Engine show standard_conforming_strings
+2024-12-23 15:07:51,689 INFO sqlalchemy.engine.Engine [raw sql] ()
+2024-12-23 15:07:51,689 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+Начало
+2024-12-23 15:07:51,692 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2024-12-23 15:07:51,692 INFO sqlalchemy.engine.Engine [generated in 0.00021s] ('followers', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2024-12-23 15:07:51,700 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2024-12-23 15:07:51,700 INFO sqlalchemy.engine.Engine [cached since 0.007805s ago] ('users', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2024-12-23 15:07:51,701 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2024-12-23 15:07:51,701 INFO sqlalchemy.engine.Engine [cached since 0.008419s ago] ('tweets', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2024-12-23 15:07:51,701 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2024-12-23 15:07:51,701 INFO sqlalchemy.engine.Engine [cached since 0.008925s ago] ('likes', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2024-12-23 15:07:51,702 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2024-12-23 15:07:51,702 INFO sqlalchemy.engine.Engine [cached since 0.009431s ago] ('media', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2024-12-23 15:07:51,702 INFO sqlalchemy.engine.Engine
+CREATE TABLE users (
+        id SERIAL NOT NULL,
+        name VARCHAR(50) NOT NULL,
+        api_key VARCHAR NOT NULL,
+        PRIMARY KEY (id)
+)
+
+
+2024-12-23 15:07:51,702 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2024-12-23 15:07:51,720 INFO sqlalchemy.engine.Engine CREATE UNIQUE INDEX ix_users_api_key ON users (api_key)
+2024-12-23 15:07:51,720 INFO sqlalchemy.engine.Engine [no key 0.00015s] ()
+2024-12-23 15:07:51,721 INFO sqlalchemy.engine.Engine CREATE INDEX ix_users_id ON users (id)
+2024-12-23 15:07:51,721 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2024-12-23 15:07:51,721 INFO sqlalchemy.engine.Engine CREATE INDEX ix_users_name ON users (name)
+2024-12-23 15:07:51,721 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2024-12-23 15:07:51,722 INFO sqlalchemy.engine.Engine
+CREATE TABLE followers (
+        follower_id INTEGER NOT NULL,
+        followed_id INTEGER NOT NULL,
+        PRIMARY KEY (follower_id, followed_id),
+        FOREIGN KEY(follower_id) REFERENCES users (id),
+        FOREIGN KEY(followed_id) REFERENCES users (id)
+)
+
+
+2024-12-23 15:07:51,722 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2024-12-23 15:07:51,727 INFO sqlalchemy.engine.Engine
+CREATE TABLE tweets (
+        id SERIAL NOT NULL,
+        text VARCHAR NOT NULL,
+        timestamp TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+        author_id INTEGER NOT NULL,
+        PRIMARY KEY (id),
+        FOREIGN KEY(author_id) REFERENCES users (id) ON DELETE CASCADE
+)
+
+
+2024-12-23 15:07:51,727 INFO sqlalchemy.engine.Engine [no key 0.00013s] ()
+2024-12-23 15:07:51,729 INFO sqlalchemy.engine.Engine CREATE INDEX ix_tweets_id ON tweets (id)
+2024-12-23 15:07:51,729 INFO sqlalchemy.engine.Engine [no key 0.00010s] ()
+2024-12-23 15:07:51,730 INFO sqlalchemy.engine.Engine
+CREATE TABLE likes (
+        id SERIAL NOT NULL,
+        tweet_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        PRIMARY KEY (id),
+        FOREIGN KEY(tweet_id) REFERENCES tweets (id),
+        FOREIGN KEY(user_id) REFERENCES users (id)
+)
+
+
+2024-12-23 15:07:51,730 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2024-12-23 15:07:51,731 INFO sqlalchemy.engine.Engine CREATE INDEX ix_likes_id ON likes (id)
+2024-12-23 15:07:51,731 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+2024-12-23 15:07:51,732 INFO sqlalchemy.engine.Engine
+CREATE TABLE media (
+        id SERIAL NOT NULL,
+        file_body BYTEA NOT NULL,
+        file_name VARCHAR NOT NULL,
+        tweet_id INTEGER,
+        PRIMARY KEY (id),
+        FOREIGN KEY(tweet_id) REFERENCES tweets (id) ON DELETE CASCADE
+)
+
+
+2024-12-23 15:07:51,732 INFO sqlalchemy.engine.Engine [no key 0.00011s] ()
+2024-12-23 15:07:51,734 INFO sqlalchemy.engine.Engine CREATE INDEX ix_media_id ON media (id)
+2024-12-23 15:07:51,734 INFO sqlalchemy.engine.Engine [no key 0.00009s] ()
+Тестовая б/д создана
+2024-12-23 15:07:51,735 INFO sqlalchemy.engine.Engine COMMIT
+2024-12-23 15:07:51,737 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2024-12-23 15:07:51,737 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2024-12-23 15:07:51,737 INFO sqlalchemy.engine.Engine [cached since 0.04465s ago] ('followers', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2024-12-23 15:07:51,738 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2024-12-23 15:07:51,738 INFO sqlalchemy.engine.Engine [cached since 0.04566s ago] ('users', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2024-12-23 15:07:51,738 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2024-12-23 15:07:51,738 INFO sqlalchemy.engine.Engine [cached since 0.04612s ago] ('tweets', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2024-12-23 15:07:51,739 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2024-12-23 15:07:51,739 INFO sqlalchemy.engine.Engine [cached since 0.04658s ago] ('likes', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2024-12-23 15:07:51,739 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2024-12-23 15:07:51,739 INFO sqlalchemy.engine.Engine [cached since 0.04702s ago] ('media', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2024-12-23 15:07:51,740 INFO sqlalchemy.engine.Engine
+DROP TABLE media
+2024-12-23 15:07:51,740 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2024-12-23 15:07:51,743 INFO sqlalchemy.engine.Engine
+DROP TABLE likes
+2024-12-23 15:07:51,743 INFO sqlalchemy.engine.Engine [no key 0.00010s] ()
+2024-12-23 15:07:51,744 INFO sqlalchemy.engine.Engine
+DROP TABLE tweets
+2024-12-23 15:07:51,744 INFO sqlalchemy.engine.Engine [no key 0.00008s] ()
+2024-12-23 15:07:51,745 INFO sqlalchemy.engine.Engine
+DROP TABLE followers
+2024-12-23 15:07:51,745 INFO sqlalchemy.engine.Engine [no key 0.00007s] ()
+2024-12-23 15:07:51,746 INFO sqlalchemy.engine.Engine
+DROP TABLE users
+2024-12-23 15:07:51,746 INFO sqlalchemy.engine.Engine [no key 0.00007s] ()
+2024-12-23 15:07:51,747 INFO sqlalchemy.engine.Engine COMMIT
+--------------------------------------------------------------------------------------------------- Captured log setup ----------------------------------------------------------------------------------------------------
+INFO     sqlalchemy.engine.Engine:base.py:1846 select pg_catalog.version()
+INFO     sqlalchemy.engine.Engine:base.py:1846 [raw sql] ()
+INFO     sqlalchemy.engine.Engine:base.py:1846 select current_schema()
+INFO     sqlalchemy.engine.Engine:base.py:1846 [raw sql] ()
+INFO     sqlalchemy.engine.Engine:base.py:1846 show standard_conforming_strings
+INFO     sqlalchemy.engine.Engine:base.py:1846 [raw sql] ()
+INFO     sqlalchemy.engine.Engine:base.py:2701 BEGIN (implicit)
+INFO     sqlalchemy.engine.Engine:base.py:1846 SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+INFO     sqlalchemy.engine.Engine:base.py:1846 [generated in 0.00021s] ('followers', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+INFO     sqlalchemy.engine.Engine:base.py:1846 SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+INFO     sqlalchemy.engine.Engine:base.py:1846 [cached since 0.007805s ago] ('users', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+INFO     sqlalchemy.engine.Engine:base.py:1846 SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+INFO     sqlalchemy.engine.Engine:base.py:1846 [cached since 0.008419s ago] ('tweets', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+INFO     sqlalchemy.engine.Engine:base.py:1846 SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+INFO     sqlalchemy.engine.Engine:base.py:1846 [cached since 0.008925s ago] ('likes', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+INFO     sqlalchemy.engine.Engine:base.py:1846 SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+INFO     sqlalchemy.engine.Engine:base.py:1846 [cached since 0.009431s ago] ('media', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+INFO     sqlalchemy.engine.Engine:base.py:1846
+CREATE TABLE users (
+        id SERIAL NOT NULL,
+        name VARCHAR(50) NOT NULL,
+        api_key VARCHAR NOT NULL,
+        PRIMARY KEY (id)
+)
+
+
+INFO     sqlalchemy.engine.Engine:base.py:1846 [no key 0.00008s] ()
+INFO     sqlalchemy.engine.Engine:base.py:1846 CREATE UNIQUE INDEX ix_users_api_key ON users (api_key)
+INFO     sqlalchemy.engine.Engine:base.py:1846 [no key 0.00015s] ()
+INFO     sqlalchemy.engine.Engine:base.py:1846 CREATE INDEX ix_users_id ON users (id)
+INFO     sqlalchemy.engine.Engine:base.py:1846 [no key 0.00009s] ()
+INFO     sqlalchemy.engine.Engine:base.py:1846 CREATE INDEX ix_users_name ON users (name)
+INFO     sqlalchemy.engine.Engine:base.py:1846 [no key 0.00009s] ()
+INFO     sqlalchemy.engine.Engine:base.py:1846
+CREATE TABLE followers (
+        follower_id INTEGER NOT NULL,
+        followed_id INTEGER NOT NULL,
+        PRIMARY KEY (follower_id, followed_id),
+        FOREIGN KEY(follower_id) REFERENCES users (id),
+        FOREIGN KEY(followed_id) REFERENCES users (id)
+)
+
+
+INFO     sqlalchemy.engine.Engine:base.py:1846 [no key 0.00008s] ()
+INFO     sqlalchemy.engine.Engine:base.py:1846
+CREATE TABLE tweets (
+        id SERIAL NOT NULL,
+        text VARCHAR NOT NULL,
+        timestamp TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+        author_id INTEGER NOT NULL,
+        PRIMARY KEY (id),
+        FOREIGN KEY(author_id) REFERENCES users (id) ON DELETE CASCADE
+)
+
+
+INFO     sqlalchemy.engine.Engine:base.py:1846 [no key 0.00013s] ()
+INFO     sqlalchemy.engine.Engine:base.py:1846 CREATE INDEX ix_tweets_id ON tweets (id)
+INFO     sqlalchemy.engine.Engine:base.py:1846 [no key 0.00010s] ()
+INFO     sqlalchemy.engine.Engine:base.py:1846
+CREATE TABLE likes (
+        id SERIAL NOT NULL,
+        tweet_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        PRIMARY KEY (id),
+        FOREIGN KEY(tweet_id) REFERENCES tweets (id),
+        FOREIGN KEY(user_id) REFERENCES users (id)
+)
+
+
+INFO     sqlalchemy.engine.Engine:base.py:1846 [no key 0.00009s] ()
+INFO     sqlalchemy.engine.Engine:base.py:1846 CREATE INDEX ix_likes_id ON likes (id)
+INFO     sqlalchemy.engine.Engine:base.py:1846 [no key 0.00009s] ()
+INFO     sqlalchemy.engine.Engine:base.py:1846
+CREATE TABLE media (
+        id SERIAL NOT NULL,
+        file_body BYTEA NOT NULL,
+        file_name VARCHAR NOT NULL,
+        tweet_id INTEGER,
+        PRIMARY KEY (id),
+        FOREIGN KEY(tweet_id) REFERENCES tweets (id) ON DELETE CASCADE
+)
+
+
+INFO     sqlalchemy.engine.Engine:base.py:1846 [no key 0.00011s] ()
+INFO     sqlalchemy.engine.Engine:base.py:1846 CREATE INDEX ix_media_id ON media (id)
+INFO     sqlalchemy.engine.Engine:base.py:1846 [no key 0.00009s] ()
+INFO     sqlalchemy.engine.Engine:base.py:2707 COMMIT
+ERROR    server.tests.test_application:test_application.py:109 Ошибка при работе с базой данных: No session provided.
+INFO     sqlalchemy.engine.Engine:base.py:2701 BEGIN (implicit)
+INFO     sqlalchemy.engine.Engine:base.py:1846 SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+INFO     sqlalchemy.engine.Engine:base.py:1846 [cached since 0.04465s ago] ('followers', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+INFO     sqlalchemy.engine.Engine:base.py:1846 SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+INFO     sqlalchemy.engine.Engine:base.py:1846 [cached since 0.04566s ago] ('users', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+INFO     sqlalchemy.engine.Engine:base.py:1846 SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+INFO     sqlalchemy.engine.Engine:base.py:1846 [cached since 0.04612s ago] ('tweets', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+INFO     sqlalchemy.engine.Engine:base.py:1846 SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+INFO     sqlalchemy.engine.Engine:base.py:1846 [cached since 0.04658s ago] ('likes', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+INFO     sqlalchemy.engine.Engine:base.py:1846 SELECT pg_catalog.pg_class.relname
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+INFO     sqlalchemy.engine.Engine:base.py:1846 [cached since 0.04702s ago] ('media', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+INFO     sqlalchemy.engine.Engine:base.py:1846
+DROP TABLE media
+INFO     sqlalchemy.engine.Engine:base.py:1846 [no key 0.00008s] ()
+INFO     sqlalchemy.engine.Engine:base.py:1846
+DROP TABLE likes
+INFO     sqlalchemy.engine.Engine:base.py:1846 [no key 0.00010s] ()
+INFO     sqlalchemy.engine.Engine:base.py:1846
+DROP TABLE tweets
+INFO     sqlalchemy.engine.Engine:base.py:1846 [no key 0.00008s] ()
+INFO     sqlalchemy.engine.Engine:base.py:1846
+DROP TABLE followers
+INFO     sqlalchemy.engine.Engine:base.py:1846 [no key 0.00007s] ()
+INFO     sqlalchemy.engine.Engine:base.py:1846
+DROP TABLE users
+INFO     sqlalchemy.engine.Engine:base.py:1846 [no key 0.00007s] ()
+INFO     sqlalchemy.engine.Engine:base.py:2707 COMMIT
+================================================================================================= short test summary info =================================================================================================
+ERROR tests/test_application.py::test_all_users - RuntimeError: No session provided.
