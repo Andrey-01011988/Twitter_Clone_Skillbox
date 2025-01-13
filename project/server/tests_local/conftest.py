@@ -53,11 +53,21 @@ async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
 
         # Создание подписок
         FollowerFactory._meta.sqlalchemy_session = session
-        for follower in users:
-            followed = random.choice([user for user in users if user != follower])
+        user_with_api_key_test = users[0] # пользователь с api_key='test'
+        if len(users) > 1:
+            author = users[1]
             follower_record = FollowerFactory(
-                follower_id=follower.id,
-                followed_id=followed.id
+                account_id=author.id,
+                follower_id=user_with_api_key_test.id
+            )
+            followers.append(follower_record)
+        for author in users[1:]:
+            follower = random.choice([user for user in users if user != author and user.api_key != "test"])
+            logger.info(f"author id: {author.name, author.id}")
+            logger.info(f"follower id: {follower.name, follower.id}")
+            follower_record = FollowerFactory(
+                account_id=author.id,
+                follower_id=follower.id
             )
             followers.append(follower_record)
         session.add_all(followers)
@@ -72,7 +82,7 @@ async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
         logger.info(f"Tweets created: {[tweet.text for tweet in tweets]}")
         session.add_all(tweets)
         await session.commit()
-        logger.info("Followers added")
+        logger.info(f"Followers added {[(i.account_id, i.follower_id) for i in followers]}")
         logger.info(f"Tweets added: {[tweet.id for tweet in tweets]}")
 
         # Создание лайков
@@ -86,7 +96,6 @@ async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
                 likes.append(like)
         logger.info(f"Likes created: {likes}")
         session.add_all(likes)
-        logger.info(f"Likes added: {[like.id for like in likes]}")
 
         # Создание медиа
         MediaFactory._meta.sqlalchemy_session = session
@@ -96,9 +105,10 @@ async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
                 media.append(media_item)
         logger.info(f"Media created: {[med.file_name for med in media]}")
         session.add_all(media)
-        logger.info(f"Media created: {[med.id for med in media]}")
 
         await session.commit()
+        logger.info(f"Likes added: {[like.id for like in likes]}")
+        logger.info(f"Media created: {[med.id for med in media]}")
         logger.info("Likes & media added")
 
         yield session

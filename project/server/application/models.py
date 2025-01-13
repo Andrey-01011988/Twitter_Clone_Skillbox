@@ -13,16 +13,16 @@ class BaseProj(AsyncAttrs, DeclarativeBase):
 class Followers(BaseProj):
     """
     Эта модель представляет собой ассоциативную таблицу, которая связывает пользователей с их подписками.
-    follower_id и followed_id являются внешними ключами, указывающими на идентификаторы пользователей в таблице users.
+    author_id и follower_id являются внешними ключами, указывающими на идентификаторы пользователей в таблице users.
     Оба поля определены как первичные ключи, что позволяет избежать дублирования записей о подписках.
     """
 
     __tablename__ = "followers"
 
-    follower_id: Mapped[int] = mapped_column(
+    account_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id"), primary_key=True
     )
-    followed_id: Mapped[int] = mapped_column(
+    follower_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id"), primary_key=True
     )
 
@@ -53,10 +53,10 @@ class Users(BaseProj):
         "Users",  # Указывает, что это отношение связано с моделью Users.
         secondary=Followers.__tablename__,  # Определяет условие соединения для получения подписчиков
         # (т.е. пользователей, которые следуют за текущим пользователем).
-        primaryjoin=id == Followers.follower_id,
-        secondaryjoin=id == Followers.followed_id,  # Определяет условие соединения для получения пользователей,
+        primaryjoin=id == Followers.account_id,
+        secondaryjoin=id == Followers.follower_id,  # Определяет условие соединения для получения пользователей,
         # на которых подписан текущий пользователь.
-        backref="following",  # Создает обратное отношение, позволяющее получить всех пользователей,
+        backref="authors",  # Создает обратное отношение, позволяющее получить всех пользователей,
         # на которых подписан текущий пользователь через атрибут 'following'.
     )
 
@@ -68,7 +68,7 @@ class Users(BaseProj):
             "id": self.id,
             "name": self.name,
             "followers": [{"id": follower.id, "name": follower.name} for follower in self.followers] if self.followers else [],
-            "following": [{"id": followed.id, "name": followed.name} for followed in self.following] if self.following else []
+            "following": [{"id": author.id, "name": author.name} for author in self.authors] if self.authors else []
         }
 
 

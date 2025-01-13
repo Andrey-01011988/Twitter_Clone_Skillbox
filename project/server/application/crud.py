@@ -132,19 +132,19 @@ class BaseDAO(Generic[T]):
             raise e
 
     @classmethod
-    async def add_followers(cls, session: AsyncSession, follower_id: int, followed_id: int):
+    async def add_followers(cls, session: AsyncSession, account_id: int, follower_id: int):
         """
         Асинхронно добавляет новую запись о подписке между пользователями.
 
         :param session:
-        :param follower_id: Идентификатор пользователя, который фолловит.
-        :param followed_id: Идентификатор пользователя, на которого фолловят.
+        :param account_id: Идентификатор пользователя, автора.
+        :param follower_id: Идентификатор пользователя - подписчика.
         """
 
         # Проверяем существование записи
         existing_follow = await cls.find_one_or_none(
+            account_id=account_id,
             follower_id=follower_id,
-            followed_id=followed_id,
             session=session
         )
 
@@ -152,7 +152,7 @@ class BaseDAO(Generic[T]):
             raise Exception("Подписка уже существует")
 
         async with session:
-            new_follow = cls.model(follower_id=follower_id, followed_id=followed_id)
+            new_follow = cls.model(account_id=account_id, follower_id=follower_id)
             session.add(new_follow)
             await session.commit()
 
@@ -225,21 +225,21 @@ class BaseDAO(Generic[T]):
             raise e
 
     @classmethod
-    async def delete_followers(cls, session: AsyncSession, follower_id: int, followed_id: int):
+    async def delete_followers(cls, session: AsyncSession, account_id: int, follower_id: int):
         """
         Асинхронно удаляет запись о подписке между пользователями.
 
         :param session:
         :param follower_id: Идентификатор пользователя, который отписывается.
-        :param followed_id: Идентификатор пользователя, от которого отписываются.
+        :param account_id: Идентификатор пользователя, от которого отписываются.
         """
         async with session:
             async with session:
                 await session.execute(
                     delete(cls.model).where(
                         and_(
-                            cls.model.follower_id == follower_id,
-                            cls.model.followed_id == followed_id
+                            cls.model.account_id == account_id,
+                            cls.model.follower_id == follower_id
                         )
                     )
                 )

@@ -1,6 +1,6 @@
 from typing import Optional, List, Dict, Union
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class BaseUser(BaseModel):
@@ -21,11 +21,11 @@ class UserIn(BaseUser):
     api_key: str
 
 
-class Followers(BaseUser):
+class Authors(BaseUser):
     id: int
 
 
-class Following(BaseUser):
+class Followers(BaseUser):
     id: int
 
 
@@ -35,14 +35,14 @@ class SimpleUserOut(BaseUser):
 
 class UserOut(BaseUser):
     id: int
-    followers: List[Followers] = []
-    following: List[Following] = []
+    followers: List[Authors] = Field(default_factory=list)
+    following: List[Followers] = Field(default_factory=list)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class TweetIn(BaseTweet):
-    tweet_media_ids: Optional[List[int]] = []
+    tweet_media_ids: Optional[List[int]] = Field(default_factory=list)
 
 
 class Like(BaseModel):
@@ -54,7 +54,7 @@ class TweetOut(BaseModel):
     id: int
     author: Dict[str, Union[int, str]]
     content: str
-    attachments: List[str] = []  # новое поле для вложений
-    likes: List[Like] = []  # новое поле для лайков
+    attachments: List[str] = Field(default_factory=list)  # новое поле для вложений
+    likes: List[Like] = Field(default_factory=list)  # новое поле для лайков
 
     model_config = ConfigDict(arbitrary_types_allowed=True)

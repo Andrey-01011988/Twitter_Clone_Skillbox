@@ -58,8 +58,8 @@ async def get_current_user(
     current_user = await UserDAO.find_one_or_none(
         session=session,
         options=[
-            selectinload(Users.followers),
-            selectinload(Users.following)
+            selectinload(Users.authors),
+            selectinload(Users.followers)
         ],
         api_key=api_key)
     if not current_user:
