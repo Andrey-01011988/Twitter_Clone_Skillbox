@@ -2,14 +2,15 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
-from sqlalchemy.orm import selectinload
+# from sqlalchemy.orm import selectinload
 from fastapi.responses import JSONResponse
 
 from application.database import AsyncSessionApp, proj_engine
 from application.models import BaseProj, Users
-from application.api.dependencies import UserDAO, get_current_session
-from application.api.endpoints import main_router
-
+# from application.api.dependencies import UserDAO, get_current_session
+from application.api.tweets_routes import tweets_router
+from application.api.medias_routes import medias_router
+from application.api.users_routes import users_router
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -17,22 +18,23 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # current_session = AsyncSessionApp()
+
     logger.info("Соединение с базой данных lifespan")
     async with proj_engine.begin() as conn:
         await conn.run_sync(BaseProj.metadata.create_all)
         logger.info("Создание таблиц, если необходимо, lifespan")
-        # yield
-    # переместил для передачи управления приложению после создания таблиц (возможно влияло на незакрытую сессию)
+
     yield
-    # await current_session.close()
+
     logger.info("Закрытие всех соединений и освобождение ресурсов б/д lifespan")
     await proj_engine.dispose()
 
 
 app_proj = FastAPI(lifespan=lifespan)
 
-app_proj.include_router(main_router)
+app_proj.include_router(users_router)
+app_proj.include_router(tweets_router)
+app_proj.include_router(medias_router)
 
 
 @app_proj.exception_handler(HTTPException)

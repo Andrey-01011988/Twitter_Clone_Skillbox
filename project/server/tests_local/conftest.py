@@ -20,19 +20,19 @@ logger = logging.getLogger(__name__)
 # Фикстуры с использованием фабрик
 @pytest_asyncio.fixture()
 async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
-    logger.info("Старт фикстуры")
-    # Строка подключения к тестовой базе данных
+    logger.info("Start fixture")
+    # Строка подключения к тестовой базе данных через консоль
     test_database_url = "postgresql+asyncpg://test:test@localhost:5433/test_twitter"
     test_engine_local = create_async_engine(test_database_url)
-    logger.info("Создание движка")
+    logger.info("Engine created")
     test_async_session = async_sessionmaker(test_engine_local, expire_on_commit=False)
-    logger.info("Создание фабрики сессий")
+    logger.info("Session maker created")
     async with test_engine_local.begin() as conn:
         await conn.run_sync(BaseProj.metadata.drop_all)
         await conn.run_sync(BaseProj.metadata.create_all)
-        logger.info("Удаление старых и создание новых таблиц")
+        logger.info("Drop old and create new tables")
     async with test_async_session() as session:
-        logger.info(f"Создание тестовой сессии session: {session}")
+        logger.info(f"Create test session: {session}")
         users = []
         UserFactory._meta.sqlalchemy_session = session
         for i in range(3):
@@ -53,15 +53,25 @@ async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
 
         # Создание подписок
         FollowerFactory._meta.sqlalchemy_session = session
-        for follower in users:
-            followed = random.choice([user for user in users if user != follower])
+        user_with_api_key_test = users[0] # пользователь с api_key='test'
+        if len(users) > 1:
+            author = users[1]
             follower_record = FollowerFactory(
-                follower_id=follower.id,
-                followed_id=followed.id
+                account_id=author.id,
+                follower_id=user_with_api_key_test.id
             )
             followers.append(follower_record)
-        logger.info("Followers added")
+        for author in users[1:]:
+            follower = random.choice([user for user in users if user != author and user.api_key != "test"])
+            logger.info(f"author id: {author.name, author.id}")
+            logger.info(f"follower id: {follower.name, follower.id}")
+            follower_record = FollowerFactory(
+                account_id=author.id,
+                follower_id=follower.id
+            )
+            followers.append(follower_record)
         session.add_all(followers)
+        logger.info(f"Followers created {followers}")
 
         # Создание твитов
         TweetFactory._meta.sqlalchemy_session = session
@@ -72,6 +82,7 @@ async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
         logger.info(f"Tweets created: {[tweet.text for tweet in tweets]}")
         session.add_all(tweets)
         await session.commit()
+        logger.info(f"Followers added {[(i.account_id, i.follower_id) for i in followers]}")
         logger.info(f"Tweets added: {[tweet.id for tweet in tweets]}")
 
         # Создание лайков
@@ -83,7 +94,7 @@ async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
                     user_id=random.choice(users).id
                 )
                 likes.append(like)
-        logger.info(f"Likes created: {[like for like in likes]}")
+        logger.info(f"Likes created: {likes}")
         session.add_all(likes)
 
         # Создание медиа
@@ -96,6 +107,8 @@ async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
         session.add_all(media)
 
         await session.commit()
+        logger.info(f"Likes added: {[like.id for like in likes]}")
+        logger.info(f"Media created: {[med.id for med in media]}")
         logger.info("Likes & media added")
 
         yield session
@@ -118,7 +131,7 @@ def test_app(test_db_session: AsyncSession) -> FastAPI:
 async def client(test_app: FastAPI) -> AsyncGenerator[AsyncClient, None]:
     async with AsyncClient(
             transport=ASGITransport(app=test_app),
-            base_url="http://localhost:5000"
+            base_url="http://localhost:5000" # для консоли
     ) as client:
         logger.info("Create test client")
         yield client
