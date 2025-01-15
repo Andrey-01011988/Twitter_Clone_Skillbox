@@ -88,13 +88,14 @@ async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
         # Создание лайков
         LikeFactory._meta.sqlalchemy_session = session
         for tweet in tweets:
+            # Обязательное добавление лайка
             if tweet.id == 3:
                 like = LikeFactory(
                     tweet_id=tweet.id,
                     user_id=users[0].id
                 )
                 likes.append(like)
-            if random.choice([True, False]):
+            elif random.choice([True, False]):
                 like = LikeFactory(
                     tweet_id=tweet.id,
                     user_id=random.choice([user for user in users if user.api_key != "test"]).id
@@ -106,15 +107,19 @@ async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
         # Создание медиа
         MediaFactory._meta.sqlalchemy_session = session
         for tweet in tweets:
-            if random.choice([True, False]):
+            # Обязательное добавление медиа
+            if tweet.id == 1:
                 media_item = MediaFactory(tweet_id=tweet.id)
                 media.append(media_item)
-        logger.info(f"Media created: {[med.file_name for med in media]}")
+            elif random.choice([True, False]):
+                media_item = MediaFactory(tweet_id=tweet.id)
+                media.append(media_item)
+        logger.info(f"Media created: {[(med.file_name, med.tweet_id) for med in media]}")
         session.add_all(media)
 
         await session.commit()
         logger.info(f"Likes added: {[like.id for like in likes]}")
-        logger.info(f"Media created: {[med.id for med in media]}")
+        logger.info(f"Media added: {[med.id for med in media]}")
         logger.info("Likes & media added")
 
         yield session

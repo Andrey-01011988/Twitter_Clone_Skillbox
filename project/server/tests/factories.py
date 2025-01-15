@@ -50,7 +50,7 @@ class MediaFactory(factory.alchemy.SQLAlchemyModelFactory):
     @factory.lazy_attribute
     def file_body(self):
         """Загрузка изображения из файла."""
-        image_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), '../tests/images'))
+        image_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), './images'))
         image_files = os.listdir(image_directory)
 
         # Выбор случайного изображения из директории
@@ -66,7 +66,7 @@ class MediaFactory(factory.alchemy.SQLAlchemyModelFactory):
     @factory.lazy_attribute
     def file_name(self):
         """Имя файла медиа."""
-        image_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), '../tests/images'))
+        image_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), './images'))
         selected_image = fake.random_element(os.listdir(image_directory))
         return selected_image  # Возвращаем имя файла
 
