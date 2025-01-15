@@ -79,7 +79,7 @@ async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
             for _ in range(2):
                 tweet = TweetFactory(author_id=user.id)
                 tweets.append(tweet)
-        logger.info(f"Tweets created: {[tweet.text for tweet in tweets]}")
+        logger.info(f"Tweets created: {[(tweet.text, tweet.author_id) for tweet in tweets]}")
         session.add_all(tweets)
         await session.commit()
         logger.info(f"Followers added {[(i.account_id, i.follower_id) for i in followers]}")
@@ -88,10 +88,16 @@ async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
         # Создание лайков
         LikeFactory._meta.sqlalchemy_session = session
         for tweet in tweets:
+            if tweet.id == 3:
+                like = LikeFactory(
+                    tweet_id=tweet.id,
+                    user_id=users[0].id
+                )
+                likes.append(like)
             if random.choice([True, False]):
                 like = LikeFactory(
                     tweet_id=tweet.id,
-                    user_id=random.choice(users).id
+                    user_id=random.choice([user for user in users if user.api_key != "test"]).id
                 )
                 likes.append(like)
         logger.info(f"Likes created: {likes}")

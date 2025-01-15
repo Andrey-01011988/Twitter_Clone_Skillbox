@@ -18,6 +18,7 @@ class TestUserAPI:
         cls.test_user_id = 2
         cls.invalid_user_id = 999
 
+
     @pytest.mark.asyncio()
     async def test_get_users_information(self, client: AsyncClient):
         response: Response = await client.get("/api/all_users")
@@ -140,8 +141,8 @@ class TestUserAPI:
 
 # Запуск из консоли
 # (ubuntuenv) uservm@uservm-VirtualBox:~/PycharmProjects/python_advanced_diploma/project/server$
-# python -m pytest tests_local/test_with_pytest_asyncio.py -v --log-cli-level=INFO
+# python -m pytest tests_local/test_users_routes.py -v --log-cli-level=INFO
 
 # Если запускать из контейнера, то необходимо указать порт 5432 и имя контейнера вместо localhost
 # (ubuntuenv) uservm@uservm-VirtualBox:~/PycharmProjects/python_advanced_diploma$ docker exec -it project_server_1 /bin/sh
-# pytest -v tests_local/test_with_pytest_asyncio.py
+# pytest -v tests_local/test_users_routes.py

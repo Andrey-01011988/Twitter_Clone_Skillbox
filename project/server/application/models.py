@@ -137,7 +137,7 @@ class Like(BaseProj):
     __tablename__ = "likes"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    tweet_id: Mapped[int] = mapped_column(Integer, ForeignKey("tweets.id"))
+    tweet_id: Mapped[int] = mapped_column(Integer, ForeignKey("tweets.id", ondelete="CASCADE"))
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
 
     tweet: Mapped["Tweets"] = relationship("Tweets", back_populates="likes")
