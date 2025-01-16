@@ -94,4 +94,4 @@ class TestMediaAPI:
 
 # Запуск из консоли
 # (ubuntuenv) uservm@uservm-VirtualBox:~/PycharmProjects/python_advanced_diploma/project/server$
-# python -m pytest tests_local/test_medias_routes.py -v --log-cli-level=INFO
+# python -m pytest tests_local_doesnt_work/test_medias_routes.py -v --log-cli-level=INFO

@@ -2,12 +2,10 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
-# from sqlalchemy.orm import selectinload
 from fastapi.responses import JSONResponse
 
 from application.database import AsyncSessionApp, proj_engine
-from application.models import BaseProj, Users
-# from application.api.dependencies import UserDAO, get_current_session
+from application.models import BaseProj
 from application.api.tweets_routes import tweets_router
 from application.api.medias_routes import medias_router
 from application.api.users_routes import users_router
@@ -43,8 +41,14 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         status_code=exc.status_code,
         content={
             "result": False,
-            "error_type": f"HTTP {exc.status_code}" if isinstance(exc.status_code, int) else "Unknown Error",
-            "error_message": exc.detail if isinstance(exc.detail, str) else str(exc.detail),
+            "error_type": (
+                f"HTTP {exc.status_code}"
+                if isinstance(exc.status_code, int)
+                else "Unknown Error"
+            ),
+            "error_message": (
+                exc.detail if isinstance(exc.detail, str) else str(exc.detail)
+            ),
         },
     )
 
@@ -69,4 +73,4 @@ async def hello():
     curl -i GET "http://localhost:5000/"
     :return: str
     """
-    return f'Welcome'
+    return f"Welcome"

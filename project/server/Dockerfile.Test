@@ -4,7 +4,7 @@ RUN apt-get update && apt-get install -y python3-dev && rm -rf /var/lib/apt/list
 
 COPY /server /server
 
-RUN pip install --no-cache-dir -r /server/requirements.txt
+RUN pip install --no-cache-dir -r /server/requirements_test.txt
 
 RUN usermod -aG root www-data
 

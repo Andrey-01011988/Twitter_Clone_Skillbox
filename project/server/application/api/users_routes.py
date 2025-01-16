@@ -1,19 +1,25 @@
 import logging
-from datetime import datetime
-from io import BytesIO
-from typing import List, Sequence, Optional, Dict, Union, Any
 
-from PIL import Image
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
-from fastapi.responses import  StreamingResponse, JSONResponse
-from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
+from typing import List, Dict, Union, Any
+
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from application.api.dependencies import get_current_session, UserDAO, TweetDAO, MediaDAO, LikeDAO, FollowersDAO, get_client_token, get_current_user
+from application.api.dependencies import (
+    get_current_session,
+    UserDAO,
+    FollowersDAO,
+    get_client_token,
+    get_current_user,
+)
 from application.models import Users, Tweets, Like
-from application.schemas import UserOut, TweetIn, TweetOut, ErrorResponse, SimpleUserOut, UserIn
+from application.schemas import (
+    UserOut,
+    ErrorResponse,
+    SimpleUserOut,
+    UserIn,
+)
 from starlette.responses import JSONResponse
 
 logging.basicConfig(level=logging.DEBUG)
@@ -24,7 +30,9 @@ users_router = APIRouter(prefix="/api", tags=["Users"])
 
 
 @users_router.get("/all_users", response_model=List[SimpleUserOut])
-async def get_all_users(session: AsyncSession = Depends(get_current_session)) -> List[Users]:
+async def get_all_users(
+    session: AsyncSession = Depends(get_current_session),
+) -> List[Users]:
     """
     Выводит всех пользователей.
 
@@ -46,17 +54,14 @@ async def get_all_users(session: AsyncSession = Depends(get_current_session)) ->
     return result
 
 
-# @main_router.get("/all_users", response_model=List[SimpleUserOut])
-# async def get_all_users(session: AsyncSession = Depends(get_current_session)) -> Sequence[Users]:
-#     result = await session.execute(select(Users))
-#     return result.scalars().all()
-
-
-@users_router.get("/users/me", response_model=Dict[str, Union[bool, UserOut]],
-                 responses={403: {"model": ErrorResponse}, 500: {"model": ErrorResponse}})
+@users_router.get(
+    "/users/me",
+    response_model=Dict[str, Union[bool, UserOut]],
+    responses={403: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
+)
 async def get_user_info(
-        current_user: Users = Depends(get_current_user)
-    ) -> JSONResponse | dict[str, bool | list[Any]] | Any:
+    current_user: Users = Depends(get_current_user),
+) -> JSONResponse | dict[str, bool | list[Any]] | Any:
     """
     Получение информации о профиле текущего пользователя.
 
@@ -98,17 +103,17 @@ async def get_user_info(
         curl -i -X GET -H "Api-Key: 1wc65vc4v1fv" "http://localhost:5000/api/users/me"
     """
 
-    return {
-        "result": True,
-        "user": current_user.to_json()
-    }
+    return {"result": True, "user": current_user.to_json()}
 
 
-@users_router.get("/users/{user_id}", response_model=Dict[str, Union[bool, UserOut]],
-                 responses={403: {"model": ErrorResponse}, 500: {"model": ErrorResponse}})
-async def get_user_info_by_id(user_id: int,
-                              session: AsyncSession = Depends(get_current_session)) -> JSONResponse | dict[
-    str, bool | list[Any]] | Any:
+@users_router.get(
+    "/users/{user_id}",
+    response_model=Dict[str, Union[bool, UserOut]],
+    responses={403: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
+)
+async def get_user_info_by_id(
+    user_id: int, session: AsyncSession = Depends(get_current_session)
+) -> JSONResponse | dict[str, bool | list[Any]] | Any:
     """
     Пользователь может получить информацию о произвольном профиле по его id.
 
@@ -132,23 +137,19 @@ async def get_user_info_by_id(user_id: int,
     user_info_by_id = await UserDAO.find_one_or_none_by_id(
         user_id,
         session=session,
-        options=[
-            selectinload(Users.authors),
-            selectinload(Users.followers)
-        ]
+        options=[selectinload(Users.authors), selectinload(Users.followers)],
     )
 
     if user_info_by_id is None:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
 
-    return {
-        "result": True,
-        "user": user_info_by_id.to_json()
-    }
+    return {"result": True, "user": user_info_by_id.to_json()}
 
 
 @users_router.post("/add_user", status_code=201)
-async def add_one_user(user: UserIn, session: AsyncSession = Depends(get_current_session)) -> str:
+async def add_one_user(
+    user: UserIn, session: AsyncSession = Depends(get_current_session)
+) -> str:
     """
     Добавляет пользователя, возвращает его.
 
@@ -172,9 +173,11 @@ async def add_one_user(user: UserIn, session: AsyncSession = Depends(get_current
 
 
 @users_router.post("/users/{user_id}/follow")
-async def follow_user(user_id: int,
-                        session: AsyncSession = Depends(get_current_session),
-                        current_user: Users = Depends(get_current_user)) -> dict:
+async def follow_user(
+    user_id: int,
+    session: AsyncSession = Depends(get_current_session),
+    current_user: Users = Depends(get_current_user),
+) -> dict:
     """
     Пользователь может зафоловить другого пользователя.
 
@@ -203,24 +206,28 @@ async def follow_user(user_id: int,
 
     # Проверяем, не подписан ли текущий пользователь уже на данного пользователя
     existing_follow = await FollowersDAO.find_one_or_none(
-        account_id=user_id,
-        follower_id=current_user.id,
-        session=session
+        account_id=user_id, follower_id=current_user.id, session=session
     )
 
     if existing_follow:
-        raise HTTPException(status_code=409, detail="Вы уже подписаны на этого пользователя")
+        raise HTTPException(
+            status_code=409, detail="Вы уже подписаны на этого пользователя"
+        )
 
     # Добавляем запись о подписке в таблицу followers
-    await FollowersDAO.add_followers(session=session, account_id=user_id, follower_id=current_user.id)
+    await FollowersDAO.add_followers(
+        session=session, account_id=user_id, follower_id=current_user.id
+    )
 
     return {"result": True}
 
 
 @users_router.delete("/users/{user_id}/follow")
-async def delete_following(user_id: int,
-                            session: AsyncSession = Depends(get_current_session),
-                            current_user: Users = Depends(get_current_user)) -> dict:
+async def delete_following(
+    user_id: int,
+    session: AsyncSession = Depends(get_current_session),
+    current_user: Users = Depends(get_current_user),
+) -> dict:
     """
     Пользователь может убрать подписку на другого пользователя.
 
@@ -250,15 +257,17 @@ async def delete_following(user_id: int,
 
     # Проверяем, есть ли запись о подписке
     existing_follow = await FollowersDAO.find_one_or_none(
-        account_id=user_id,
-        follower_id=current_user.id,
-        session=session
+        account_id=user_id, follower_id=current_user.id, session=session
     )
 
     if not existing_follow:
-        raise HTTPException(status_code=409, detail="Вы не подписаны на этого пользователя")
+        raise HTTPException(
+            status_code=409, detail="Вы не подписаны на этого пользователя"
+        )
 
     # Удаляем запись о подписке из таблицы followers
-    await FollowersDAO.delete_followers(session=session, account_id=user_id, follower_id=current_user.id)
+    await FollowersDAO.delete_followers(
+        session=session, account_id=user_id, follower_id=current_user.id
+    )
 
     return {"result": True}

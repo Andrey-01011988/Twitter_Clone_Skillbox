@@ -151,4 +151,4 @@ async def test_all_users(setup_database):
     assert len(response.json()) > 0 # тут тест должен доказать что setup_database сработала и что то добавила
 
 # Запуск из: (ubuntuenv) uservm@uservm-VirtualBox:~/PycharmProjects/python_advanced_diploma/project/server$
-# python -m pytest tests_local/test_application_local.py
+# python -m pytest tests_local_doesnt_work/test_application_local.py

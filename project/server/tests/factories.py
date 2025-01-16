@@ -15,7 +15,9 @@ class UserFactory(factory.alchemy.SQLAlchemyModelFactory):
         sqlalchemy_session = None
 
     name = factory.LazyAttribute(lambda _: fake.name())  # Генерация имени пользователя
-    api_key = factory.LazyAttribute(lambda _: fake.bothify(text='??###?##'))  # Генерация API-ключа
+    api_key = factory.LazyAttribute(
+        lambda _: fake.bothify(text="??###?##")
+    )  # Генерация API-ключа
 
 
 class TweetFactory(factory.alchemy.SQLAlchemyModelFactory):
@@ -25,8 +27,12 @@ class TweetFactory(factory.alchemy.SQLAlchemyModelFactory):
         model = Tweets
         sqlalchemy_session = None
 
-    text = factory.LazyAttribute(lambda _: fake.sentence(nb_words=5, variable_nb_words=True))  # Генерация текста твита
-    author_id = factory.SubFactory(UserFactory)  # Привязка твита к случайному пользователю
+    text = factory.LazyAttribute(
+        lambda _: fake.sentence(nb_words=5, variable_nb_words=True)
+    )  # Генерация текста твита
+    author_id = factory.SubFactory(
+        UserFactory
+    )  # Привязка твита к случайному пользователю
 
 
 class LikeFactory(factory.alchemy.SQLAlchemyModelFactory):
@@ -37,7 +43,9 @@ class LikeFactory(factory.alchemy.SQLAlchemyModelFactory):
         sqlalchemy_session = None
 
     tweet_id = factory.SubFactory(TweetFactory)  # Создание твита, который лайкаем
-    user_id = factory.SubFactory(UserFactory)  # Создание пользователя, который ставит лайк
+    user_id = factory.SubFactory(
+        UserFactory
+    )  # Создание пользователя, который ставит лайк
 
 
 class MediaFactory(factory.alchemy.SQLAlchemyModelFactory):
@@ -50,7 +58,9 @@ class MediaFactory(factory.alchemy.SQLAlchemyModelFactory):
     @factory.lazy_attribute
     def file_body(self):
         """Загрузка изображения из файла."""
-        image_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), './images'))
+        image_directory = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "./images")
+        )
         image_files = os.listdir(image_directory)
 
         # Выбор случайного изображения из директории
@@ -60,13 +70,15 @@ class MediaFactory(factory.alchemy.SQLAlchemyModelFactory):
         image_path = os.path.join(image_directory, selected_image)
 
         # Чтение изображения в бинарном формате
-        with open(image_path, 'rb') as f:
+        with open(image_path, "rb") as f:
             return f.read()  # Возвращаем бинарные данные изображения
 
     @factory.lazy_attribute
     def file_name(self):
         """Имя файла медиа."""
-        image_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), './images'))
+        image_directory = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "./images")
+        )
         selected_image = fake.random_element(os.listdir(image_directory))
         return selected_image  # Возвращаем имя файла
 
@@ -80,5 +92,9 @@ class FollowerFactory(factory.alchemy.SQLAlchemyModelFactory):
         model = Followers
         sqlalchemy_session = None
 
-    account_id = factory.SubFactory(UserFactory)  # Создание пользователя, который подписывается
-    follower_id = factory.SubFactory(UserFactory)  # Создание пользователя, на которого подписываются
+    account_id = factory.SubFactory(
+        UserFactory
+    )  # Создание пользователя, который подписывается
+    follower_id = factory.SubFactory(
+        UserFactory
+    )  # Создание пользователя, на которого подписываются

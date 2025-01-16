@@ -16,7 +16,9 @@ medias_router = APIRouter(prefix="/api", tags=["Media"])
 
 
 @medias_router.get("/media/{media_id}")
-async def get_media(media_id: int, session: AsyncSession = Depends(get_current_session)):
+async def get_media(
+    media_id: int, session: AsyncSession = Depends(get_current_session)
+):
     """
     Получение медиа привязанного к твиту в виде изображения.
 
@@ -42,7 +44,9 @@ async def get_media(media_id: int, session: AsyncSession = Depends(get_current_s
     try:
         # Открываем изображение с помощью Pillow для определения формата
         image = Image.open(image_stream)
-        content_type = f'image/{image.format.lower()}'  # Получаем тип контента в нижнем регистре
+        content_type = (
+            f"image/{image.format.lower()}"  # Получаем тип контента в нижнем регистре
+        )
 
         # Сбрасываем указатель потока на начало
         image_stream.seek(0)
@@ -54,9 +58,11 @@ async def get_media(media_id: int, session: AsyncSession = Depends(get_current_s
 
 
 @medias_router.post("/medias")
-async def add_media(api_key: str = Depends(get_client_token),
-                    file: UploadFile = File(...),
-                    session: AsyncSession = Depends(get_current_session)) -> dict:
+async def add_media(
+    api_key: str = Depends(get_client_token),
+    file: UploadFile = File(...),
+    session: AsyncSession = Depends(get_current_session),
+) -> dict:
     """
     Эндпоинт для загрузки медиафайлов.
 
@@ -84,7 +90,9 @@ async def add_media(api_key: str = Depends(get_client_token),
         file_body = await file.read()
 
         # Создание записи в базе данных
-        new_media = await MediaDAO.add(session=session, file_body=file_body, file_name=file.filename)
+        new_media = await MediaDAO.add(
+            session=session, file_body=file_body, file_name=file.filename
+        )
 
         return {"result": True, "media_id": new_media.id}
 

@@ -8,14 +8,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class BaseDAO(Generic[T]):
     model: T = None
 
     @classmethod
-    async def find_one_or_none_by_id(cls, data_id: int, session: AsyncSession, options=None):
+    async def find_one_or_none_by_id(
+        cls, data_id: int, session: AsyncSession, options=None
+    ):
         """
         Асинхронно находит и возвращает один экземпляр модели по указанному идентификатору или None.
 
@@ -59,8 +61,14 @@ class BaseDAO(Generic[T]):
         return result.scalar_one_or_none()
 
     @classmethod
-    async def find_all(cls, session: AsyncSession, options=None, filters: dict = None, order_by: list = None,
-                       joins: list = None):
+    async def find_all(
+        cls,
+        session: AsyncSession,
+        options=None,
+        filters: dict = None,
+        order_by: list = None,
+        joins: list = None,
+    ):
         """
         Асинхронно находит и возвращает все экземпляры модели, удовлетворяющие указанным критериям.
 
@@ -89,7 +97,9 @@ class BaseDAO(Generic[T]):
             for key, value in filters.items():
                 column = getattr(cls.model, key)
                 if isinstance(value, list):
-                    query = query.filter(column.in_(value))  # Для списков используем in_
+                    query = query.filter(
+                        column.in_(value)
+                    )  # Для списков используем in_
                 else:
                     query = query.filter(column == value)  # Для одиночных значений
         if order_by:
@@ -132,7 +142,9 @@ class BaseDAO(Generic[T]):
             raise e
 
     @classmethod
-    async def add_followers(cls, session: AsyncSession, account_id: int, follower_id: int):
+    async def add_followers(
+        cls, session: AsyncSession, account_id: int, follower_id: int
+    ):
         """
         Асинхронно добавляет новую запись о подписке между пользователями.
 
@@ -143,9 +155,7 @@ class BaseDAO(Generic[T]):
 
         # Проверяем существование записи
         existing_follow = await cls.find_one_or_none(
-            account_id=account_id,
-            follower_id=follower_id,
-            session=session
+            account_id=account_id, follower_id=follower_id, session=session
         )
 
         if existing_follow:
@@ -208,10 +218,7 @@ class BaseDAO(Generic[T]):
         """
         logger.info("Удаление экземпляра модели")
 
-        query_smt = (
-            delete(cls.model)
-            .where(cls.model.id == instance.id)
-        )
+        query_smt = delete(cls.model).where(cls.model.id == instance.id)
 
         try:
             async with session:
@@ -225,7 +232,9 @@ class BaseDAO(Generic[T]):
             raise e
 
     @classmethod
-    async def delete_followers(cls, session: AsyncSession, account_id: int, follower_id: int):
+    async def delete_followers(
+        cls, session: AsyncSession, account_id: int, follower_id: int
+    ):
         """
         Асинхронно удаляет запись о подписке между пользователями.
 
@@ -239,9 +248,8 @@ class BaseDAO(Generic[T]):
                     delete(cls.model).where(
                         and_(
                             cls.model.account_id == account_id,
-                            cls.model.follower_id == follower_id
+                            cls.model.follower_id == follower_id,
                         )
                     )
                 )
                 await session.commit()
-

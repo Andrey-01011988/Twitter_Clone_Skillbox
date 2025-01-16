@@ -2,9 +2,13 @@ FROM python:3.11
 
 RUN apt-get update && apt-get install -y python3-dev && rm -rf /var/lib/apt/lists/*
 
-COPY /server /server
+COPY /server/alembic /server/alembic
+COPY /server/application /server/application
+COPY /server/__init__.py /server
+COPY /server/alembic.ini /server
+COPY /server/requirements_prod.txt /server
 
-RUN pip install -r /server/requirements.txt
+RUN pip install -r /server/requirements_prod.txt
 
 RUN usermod -aG root www-data
 

@@ -141,8 +141,8 @@ class TestUserAPI:
 
 # Запуск из консоли
 # (ubuntuenv) uservm@uservm-VirtualBox:~/PycharmProjects/python_advanced_diploma/project/server$
-# python -m pytest tests_local/test_users_routes.py -v --log-cli-level=INFO
+# python -m pytest tests_local_doesnt_work/test_users_routes.py -v --log-cli-level=INFO
 
 # Если запускать из контейнера, то необходимо указать порт 5432 и имя контейнера вместо localhost
 # (ubuntuenv) uservm@uservm-VirtualBox:~/PycharmProjects/python_advanced_diploma$ docker exec -it project_server_1 /bin/sh
-# pytest -v tests_local/test_users_routes.py
+# pytest -v tests_local_doesnt_work/test_users_routes.py

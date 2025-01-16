@@ -8,7 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.responses import JSONResponse
 
-from application.api.dependencies import get_current_session, TweetDAO, get_current_user, MediaDAO, LikeDAO
+from application.api.dependencies import (
+    get_current_session,
+    TweetDAO,
+    get_current_user,
+    MediaDAO,
+    LikeDAO,
+)
 from application.models import Tweets, Like, Users
 from application.schemas import TweetOut, ErrorResponse, TweetIn
 
@@ -19,12 +25,14 @@ logger = logging.getLogger(__name__)
 tweets_router = APIRouter(prefix="/api", tags=["Tweets"])
 
 
-@tweets_router.get("/tweets", response_model=Dict[str, Union[bool, List[TweetOut]]],
-                 responses={403: {"model": ErrorResponse}, 500: {"model": ErrorResponse}})
+@tweets_router.get(
+    "/tweets",
+    response_model=Dict[str, Union[bool, List[TweetOut]]],
+    responses={403: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
+)
 async def get_users_tweets(
-        session: AsyncSession = Depends(get_current_session)
-    ) -> JSONResponse | dict[
-    str, bool | list[Any]] | Any:
+    session: AsyncSession = Depends(get_current_session),
+) -> JSONResponse | dict[str, bool | list[Any]] | Any:
     """
     Получение ленты твитов для пользователя.
 
@@ -68,11 +76,16 @@ async def get_users_tweets(
     try:
         # Получаем все твиты пользователя с подгрузкой связанных данных (автор, медиа и лайки)
         logger.info(f"Сессия передается в метод запроса session: {session}")
-        all_tweets = await TweetDAO.find_all(session=session, options=[
-            selectinload(Tweets.author),  # Подгружаем автора твита
-            selectinload(Tweets.attachments),  # Подгружаем медиафайлы твита
-            selectinload(Tweets.likes).selectinload(Like.user)  # Подгружаем лайки и пользователей, которые их поставили
-        ])
+        all_tweets = await TweetDAO.find_all(
+            session=session,
+            options=[
+                selectinload(Tweets.author),  # Подгружаем автора твита
+                selectinload(Tweets.attachments),  # Подгружаем медиафайлы твита
+                selectinload(Tweets.likes).selectinload(
+                    Like.user
+                ),  # Подгружаем лайки и пользователей, которые их поставили
+            ],
+        )
 
         # Преобразуем каждый твит в формат JSON
         tweets_json = [tweet.to_json() for tweet in all_tweets]
@@ -81,18 +94,15 @@ async def get_users_tweets(
         raise HTTPException(status_code=500, detail=str(e))
 
     # Возвращаем успешный ответ с результатами
-    return {
-        "result": True,
-        "tweets": tweets_json  # Список твитов в формате JSON
-    }
+    return {"result": True, "tweets": tweets_json}  # Список твитов в формате JSON
 
 
 @tweets_router.post("/tweets", status_code=201)
 async def add_tweet(
-        tweet: TweetIn,
-        session: AsyncSession = Depends(get_current_session),
-        current_user: Users = Depends(get_current_user)
-    ) -> dict[str, bool | Any]:
+    tweet: TweetIn,
+    session: AsyncSession = Depends(get_current_session),
+    current_user: Users = Depends(get_current_user),
+) -> dict[str, bool | Any]:
     """
     Добавляет новый твит от пользователя.
 
@@ -125,7 +135,7 @@ async def add_tweet(
     new_tweet_data = {
         "author_id": current_user.id,
         "text": tweet.tweet_data,
-        "timestamp": datetime.now().replace(tzinfo=None)
+        "timestamp": datetime.now().replace(tzinfo=None),
     }
 
     try:
@@ -133,11 +143,14 @@ async def add_tweet(
 
         # Привязка медиафайлов к новому твиту
         for media_id in tweet.tweet_media_ids:
-            media = await MediaDAO.find_one_or_none_by_id(media_id, session=session)  # Получаем медиа по ID
+            media = await MediaDAO.find_one_or_none_by_id(
+                media_id, session=session
+            )  # Получаем медиа по ID
             if media:
                 media.tweet_id = new_tweet.id  # Привязываем медиа к новому твиту
-                await MediaDAO.update(session=session, instance=media,
-                                      tweet_id=new_tweet.id)  # Обновляем запись в базе данных
+                await MediaDAO.update(
+                    session=session, instance=media, tweet_id=new_tweet.id
+                )  # Обновляем запись в базе данных
 
         return {"result": True, "tweet_id": new_tweet.id}
 
@@ -146,9 +159,11 @@ async def add_tweet(
 
 
 @tweets_router.post("/tweets/{tweet_id}/likes")
-async def add_like(tweet_id: int,
-                    session: AsyncSession = Depends(get_current_session),
-                    current_user: Users = Depends(get_current_user)) -> dict:
+async def add_like(
+    tweet_id: int,
+    session: AsyncSession = Depends(get_current_session),
+    current_user: Users = Depends(get_current_user),
+) -> dict:
     """
     Пользователь может поставить отметку «Нравится» на твит по его идентификатору.
     Лайк можно поставить только на существующий твит.
@@ -182,9 +197,11 @@ async def add_like(tweet_id: int,
 
 
 @tweets_router.delete("/tweets/{tweet_id}")
-async def delete_tweet(tweet_id: int,
-                        session: AsyncSession = Depends(get_current_session),
-                        current_user: Users = Depends(get_current_user)) -> dict:
+async def delete_tweet(
+    tweet_id: int,
+    session: AsyncSession = Depends(get_current_session),
+    current_user: Users = Depends(get_current_user),
+) -> dict:
     """
     Этот эндпоинт позволяет пользователю удалить твит по его идентификатору.
     Удаление возможно только для твитов, принадлежащих текущему пользователю.
@@ -211,7 +228,10 @@ async def delete_tweet(tweet_id: int,
 
     # Проверяем, существует ли твит и принадлежит ли он текущему пользователю
     if not current_tweet or current_tweet.author_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Твит не найден или вы не имеете прав на его удаление")
+        raise HTTPException(
+            status_code=404,
+            detail="Твит не найден или вы не имеете прав на его удаление",
+        )
 
     # Удаляем твит
     await TweetDAO.delete(session=session, instance=current_tweet)
@@ -220,9 +240,11 @@ async def delete_tweet(tweet_id: int,
 
 
 @tweets_router.delete("/tweets/{tweet_id}/likes")
-async def delete_like(tweet_id: int,
-                        session: AsyncSession = Depends(get_current_session),
-                        current_user: Users = Depends(get_current_user)) -> dict:
+async def delete_like(
+    tweet_id: int,
+    session: AsyncSession = Depends(get_current_session),
+    current_user: Users = Depends(get_current_user),
+) -> dict:
     """
     Пользователь может убрать отметку «Нравится» с твита.
 
@@ -245,13 +267,14 @@ async def delete_like(tweet_id: int,
     """
     # Ищем лайк по идентификатору твита и пользователю
     like = await LikeDAO.find_one_or_none(
-        tweet_id=tweet_id,
-        user_id=current_user.id,
-        session=session
+        tweet_id=tweet_id, user_id=current_user.id, session=session
     )
 
     if not like:
-        raise HTTPException(status_code=404, detail="Лайк не найден или вы не имеете прав на его удаление")
+        raise HTTPException(
+            status_code=404,
+            detail="Лайк не найден или вы не имеете прав на его удаление",
+        )
 
     # Удаляем лайк
     await LikeDAO.delete(session=session, instance=like)

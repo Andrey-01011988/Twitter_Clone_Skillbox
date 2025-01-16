@@ -147,6 +147,6 @@ async def test_all_users(setup_database):
 
 
 # Запуск из: (ubuntuenv) uservm@uservm-VirtualBox:~/PycharmProjects/python_advanced_diploma/project/server$
-# python -m pytest tests_local/test_sync_application_local.py
+# python -m pytest tests_local_doesnt_work/test_sync_application_local.py
 # (ubuntuenv) uservm@uservm-VirtualBox:~/PycharmProjects/python_advanced_diploma/project/server$
-# python -m pytest tests_local/test_sync_application_local.py -v --log-cli-level=INFO
+# python -m pytest tests_local_doesnt_work/test_sync_application_local.py -v --log-cli-level=INFO

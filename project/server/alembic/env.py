@@ -14,7 +14,9 @@ from application.models import BaseProj
 config = context.config
 
 # config.set_main_option("sqlalchemy.url", "postgresql+asyncpg://admin:admin@postgres_container:5432/twitter")
-config.set_main_option("sqlalchemy.url", "postgresql+asyncpg://admin:admin@172.18.0.2:5432/twitter")
+config.set_main_option(
+    "sqlalchemy.url", "postgresql+asyncpg://admin:admin@172.18.0.2:5432/twitter"
+)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

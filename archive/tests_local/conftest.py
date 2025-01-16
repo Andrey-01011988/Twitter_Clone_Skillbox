@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 @pytest_asyncio.fixture()
 async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
     logger.info("Start fixture")
-    # Строка подключения к тестовой базе данных через консоль
+    # Строка подключения к тестовой базе данных через консоль (раскомментировать test_db в docker-compose.dev.yaml)
     test_database_url = "postgresql+asyncpg://test:test@localhost:5433/test_twitter"
     test_engine_local = create_async_engine(test_database_url)
     logger.info("Engine created")

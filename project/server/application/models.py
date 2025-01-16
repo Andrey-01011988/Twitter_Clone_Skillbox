@@ -54,7 +54,8 @@ class Users(BaseProj):
         secondary=Followers.__tablename__,  # Определяет условие соединения для получения подписчиков
         # (т.е. пользователей, которые следуют за текущим пользователем).
         primaryjoin=id == Followers.account_id,
-        secondaryjoin=id == Followers.follower_id,  # Определяет условие соединения для получения пользователей,
+        secondaryjoin=id
+        == Followers.follower_id,  # Определяет условие соединения для получения пользователей,
         # на которых подписан текущий пользователь.
         backref="authors",  # Создает обратное отношение, позволяющее получить всех пользователей,
         # на которых подписан текущий пользователь через атрибут 'following'.
@@ -67,8 +68,19 @@ class Users(BaseProj):
         return {
             "id": self.id,
             "name": self.name,
-            "followers": [{"id": follower.id, "name": follower.name} for follower in self.followers] if self.followers else [],
-            "following": [{"id": author.id, "name": author.name} for author in self.authors] if self.authors else []
+            "followers": (
+                [
+                    {"id": follower.id, "name": follower.name}
+                    for follower in self.followers
+                ]
+                if self.followers
+                else []
+            ),
+            "following": (
+                [{"id": author.id, "name": author.name} for author in self.authors]
+                if self.authors
+                else []
+            ),
         }
 
 
@@ -91,7 +103,9 @@ class Tweets(BaseProj):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     text: Mapped[str] = mapped_column(String)
-    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
     author_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
@@ -115,13 +129,24 @@ class Tweets(BaseProj):
         return {
             "id": self.id,
             "content": self.text,
-            "timestamp": self.timestamp.isoformat(), # Перевод значения datetime в строковое
+            "timestamp": self.timestamp.isoformat(),  # Перевод значения datetime в строковое
             "author": {
                 "id": self.author.id,
                 "name": self.author.name,
             },
-            "attachments": [f"/api/media/{i_attachment.id}" for i_attachment in self.attachments] if self.attachments else [],
-            "likes": [{"user_id": like.user_id, "name": like.user.name} for like in self.likes] if self.likes else [],
+            "attachments": (
+                [f"/api/media/{i_attachment.id}" for i_attachment in self.attachments]
+                if self.attachments
+                else []
+            ),
+            "likes": (
+                [
+                    {"user_id": like.user_id, "name": like.user.name}
+                    for like in self.likes
+                ]
+                if self.likes
+                else []
+            ),
         }
 
 
@@ -137,7 +162,9 @@ class Like(BaseProj):
     __tablename__ = "likes"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    tweet_id: Mapped[int] = mapped_column(Integer, ForeignKey("tweets.id", ondelete="CASCADE"))
+    tweet_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("tweets.id", ondelete="CASCADE")
+    )
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
 
     tweet: Mapped["Tweets"] = relationship("Tweets", back_populates="likes")
@@ -169,11 +196,16 @@ class Media(BaseProj):
         tweet (Tweets): Отношение к модели `Tweets`. Позволяет получить
                         доступ к твиту, к которому прикреплен данный медиа-объект.
     """
+
     __tablename__ = "media"  # Убедитесь, что имя таблицы соответствует вашему проекту
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    file_body: Mapped[bytes] = mapped_column(LargeBinary)  # Хранит бинарные данные файла
+    file_body: Mapped[bytes] = mapped_column(
+        LargeBinary
+    )  # Хранит бинарные данные файла
     file_name: Mapped[str] = mapped_column(String)  # Имя файла
-    tweet_id: Mapped[int] =  mapped_column(Integer, ForeignKey("tweets.id", ondelete="CASCADE"), nullable=True)  # Внешний ключ на твиты
+    tweet_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("tweets.id", ondelete="CASCADE"), nullable=True
+    )  # Внешний ключ на твиты
 
     tweet: Mapped["Tweets"] = relationship("Tweets", back_populates="attachments")

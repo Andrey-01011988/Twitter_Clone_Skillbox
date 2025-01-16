@@ -1,8 +1,7 @@
 import logging
 from typing import Union
 
-from fastapi import Header, HTTPException, Request, Depends
-# from sqlalchemy import delete, and_
+from fastapi import Header, HTTPException, Depends
 
 from application.crud import BaseDAO
 from application.database import AsyncSessionApp
@@ -28,7 +27,9 @@ async def get_current_session() -> AsyncSession:
             logger.info("Закрытие сессии Dependencies")
 
 
-async def get_client_token(session: AsyncSession = Depends(get_current_session), api_key: str = Header(...)):
+async def get_client_token(
+    session: AsyncSession = Depends(get_current_session), api_key: str = Header(...)
+):
     """
     Извлекает API ключ из заголовка и проверяет его на валидность.
 
@@ -36,32 +37,26 @@ async def get_client_token(session: AsyncSession = Depends(get_current_session),
     :param api_key: API ключ пользователя
     :return: API ключ, если он валиден
     """
-    user = await UserDAO.find_one_or_none(api_key=api_key,  session=session)
+    user = await UserDAO.find_one_or_none(api_key=api_key, session=session)
     logger.info(f"Пользователь найден {user}")
     if user is None:
-        raise HTTPException(status_code=403, detail="Доступ запрещен: неверный API ключ")
+        raise HTTPException(
+            status_code=403, detail="Доступ запрещен: неверный API ключ"
+        )
     logger.info(f"Возвращен ключ api_key: {api_key}")
     return api_key
 
 
 # Зависимость для получения текущего пользователя
-# async def get_current_user(request: Request):
-#     if not hasattr(request.state, 'current_user'):
-#         raise HTTPException(status_code=403, detail="User not authenticated")
-#     return request.state.current_user
-
-# Зависимость для получения текущего пользователя
 async def get_current_user(
-        session: AsyncSession = Depends(get_current_session),
-        api_key: str = Depends(get_client_token)
-    ) ->  Union[Users, JSONResponse]:
+    session: AsyncSession = Depends(get_current_session),
+    api_key: str = Depends(get_client_token),
+) -> Union[Users, JSONResponse]:
     current_user = await UserDAO.find_one_or_none(
         session=session,
-        options=[
-            selectinload(Users.authors),
-            selectinload(Users.followers)
-        ],
-        api_key=api_key)
+        options=[selectinload(Users.authors), selectinload(Users.followers)],
+        api_key=api_key,
+    )
     if not current_user:
         logger.warning(f"Пользователь с API ключом {api_key} не найден.")
         return JSONResponse(status_code=404, content={"error": "User not found"})
