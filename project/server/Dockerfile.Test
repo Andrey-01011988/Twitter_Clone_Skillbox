@@ -1,0 +1,25 @@
+FROM python:3.11
+
+RUN apt-get update && apt-get install -y python3-dev && rm -rf /var/lib/apt/lists/*
+
+COPY /server /server
+
+RUN pip install --no-cache-dir -r /server/requirements.txt
+
+RUN usermod -aG root www-data
+
+ENV PYTHONPATH=/server
+
+WORKDIR /server
+
+# Удержание контейнера активным после создания
+# ENTRYPOINT ["/bin/sh", "-c", "sleep infinity"]
+
+# Запускаем тесты и удерживаем контейнер активным
+# CMD ["sh", "-c", "pytest -v tests/; tail -f /dev/null"]
+
+# После прохождения тестов контейнер остановится
+CMD ["pytest", "-v", "tests/"]
+
+# Подробный вывод логирования при прохождении тестов
+# CMD ["pytest", "-v", "tests/", "--log-cli-level=INFO"]

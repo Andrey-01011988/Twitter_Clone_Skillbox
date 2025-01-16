@@ -1,0 +1,43 @@
+Запустить все файлы с тестами в директории
+
+(venv) uservm@uservm-VirtualBox:~/PycharmProjects/python_advanced/module_29_testing/lessons/2$ pytest
+
+Запустить конкретный файл с тестами
+
+(venv) uservm@uservm-VirtualBox:~/PycharmProjects/python_advanced/module_29_testing/lessons/2$ pytest test_functions.py
+
+Чтобы избежать предупреждения об устаревшем поведении функции, необходимо указать в pytest.ini
+
+asyncio_default_fixture_loop_scope = function
+
+Запуск последнего упавшего теста
+
+pytest --lf
+
+Запуск сначала проваленного теста
+
+pytest --ff
+
+Подробная информация о тестах
+
+pytest -v
+
+Один из тестов в файле не пройден
+
+pytest
+
+test_fixture.py ..                                                                                                                                                                                                  [ 18%]
+test_functions.py .F....                                                                                                                                                                                            [ 72%]
+test_parametrize.py ...                                                                                                                                                                                             [100%]
+
+Фильтровать тесты по названию (в данном случае math)
+
+pytest -k math -v
+
+Запуск тестов по маркеру (маркеры указываются в файле pytest.ini)
+
+pytest -m math -v
+
+Список доступных маркеров
+
+pytest --markers
