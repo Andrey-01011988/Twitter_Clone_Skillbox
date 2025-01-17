@@ -8,7 +8,7 @@ COPY /server/__init__.py /server
 COPY /server/alembic.ini /server
 COPY /server/requirements_prod.txt /server
 
-RUN pip install -r /server/requirements_prod.txt
+RUN pip install --no-cache-dir -r /server/requirements_prod.txt
 
 RUN usermod -aG root www-data
 

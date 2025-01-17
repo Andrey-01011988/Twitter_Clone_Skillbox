@@ -16,13 +16,21 @@ logger = logging.getLogger(__name__)
 
 # Назначение текущей сессии
 async def get_current_session() -> AsyncSession:
+    """
+    Создает и управляет текущей сессией базы данных.
+
+    Эта функция создает новую асинхронную сессию базы данных и передает ее
+    вызывающим функциям. Сессия будет закрыта после завершения использования.
+
+    :return: Асинхронная сессия базы данных (AsyncSession).
+    """
     logger.info("Создание новой сессии Dependencies")
     async with AsyncSessionApp() as current_session:
         try:
-            logger.info(f"Передача сессии session: {current_session}")
+            logger.info("Передача сессии session: %s", current_session)
             yield current_session
         finally:
-            logger.info(f"Закрывается сессия session: {current_session}")
+            logger.info("Закрывается сессия session: %s", current_session)
             await current_session.close()
             logger.info("Закрытие сессии Dependencies")
 
@@ -38,12 +46,12 @@ async def get_client_token(
     :return: API ключ, если он валиден
     """
     user = await UserDAO.find_one_or_none(api_key=api_key, session=session)
-    logger.info(f"Пользователь найден {user}")
+    logger.info("Пользователь найден: %s", user)
     if user is None:
         raise HTTPException(
             status_code=403, detail="Доступ запрещен: неверный API ключ"
         )
-    logger.info(f"Возвращен ключ api_key: {api_key}")
+    logger.info("Возвращен ключ api_key: %s", api_key)
     return api_key
 
 
@@ -52,13 +60,26 @@ async def get_current_user(
     session: AsyncSession = Depends(get_current_session),
     api_key: str = Depends(get_client_token),
 ) -> Union[Users, JSONResponse]:
+    """
+    Извлекает текущего пользователя на основе API ключа.
+
+    Эта функция использует переданную сессию и API ключ для поиска
+    пользователя в базе данных. Если пользователь не найден, возвращается
+    JSONResponse с кодом 404.
+
+    :param session: Асинхронная сессия базы данных (AsyncSession),
+                    используемая для выполнения запросов.
+    :param api_key: API ключ пользователя, получаемый из заголовка.
+    :return: Объект пользователя (Users), если он найден, или
+             JSONResponse с ошибкой 404, если пользователь не найден.
+    """
     current_user = await UserDAO.find_one_or_none(
         session=session,
         options=[selectinload(Users.authors), selectinload(Users.followers)],
         api_key=api_key,
     )
     if not current_user:
-        logger.warning(f"Пользователь с API ключом {api_key} не найден.")
+        logger.warning("Пользователь с API ключом %s не найден.", api_key)
         return JSONResponse(status_code=404, content={"error": "User not found"})
     return current_user
 

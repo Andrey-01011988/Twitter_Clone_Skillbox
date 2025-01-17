@@ -82,8 +82,8 @@ async def get_user_info(
                 "user": {
                     "id": 1,
                     "username": "example_user",
-                    "authors": [...],
-                    "followers": [...]
+                    "followers": [...],
+                    "following": [...]
                 }
             }
         - Ошибка 403:
