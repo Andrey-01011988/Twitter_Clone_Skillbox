@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
                 )
 
                 if test_user is None:
-                    user = await UserDAO.add(session=session, data={"name": "Dan", "api_key": "test"})
+                    user = await UserDAO.add(session=session, name="Dan", api_key="test")
                     logger.info("Тестовый пользователь успешно добавлен %s", user)
                 else:
                     logger.info("Тестовый пользователь уже существует")
