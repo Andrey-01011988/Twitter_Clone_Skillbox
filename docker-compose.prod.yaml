@@ -1,8 +1,8 @@
 services:
   client:
     build:
-      context: ../project
-      dockerfile: ../project/client/Dockerfile
+      context: .
+      dockerfile: client/Dockerfile
     ports:
       - "8080:80"
     depends_on:
@@ -16,8 +16,8 @@ services:
 #      - ./client/templates:/app/templates  # Использование той же локальной директории для шаблонов
   server:
     build:
-      context: ../project
-      dockerfile: ../project/server/Dockerfile
+      context: .
+      dockerfile: server/Dockerfile
     ports:
       - "5000:5000"
     depends_on:

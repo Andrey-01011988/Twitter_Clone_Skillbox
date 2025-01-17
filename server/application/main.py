@@ -10,7 +10,7 @@ from application.models import BaseProj, Users
 from application.api.tweets_routes import tweets_router
 from application.api.medias_routes import medias_router
 from application.api.users_routes import users_router
-from application.api.dependencies import UserDAO
+from application.utils import add_test_information
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -23,27 +23,8 @@ async def lifespan(app: FastAPI):
     async with proj_engine.begin() as conn:
         await conn.run_sync(BaseProj.metadata.create_all)
         logger.info("Создание таблиц, если необходимо, lifespan")
-        async with AsyncSessionApp() as session:
-            logger.info("Создание новой сессии для добавления тестового пользователя %s", session)
-            try:
-                test_user = await  UserDAO.find_one_or_none(
-                    session=session,
-                    options=[selectinload(Users.followers)],
-                    api_key="test"
-                )
-
-                if test_user is None:
-                    user = await UserDAO.add(session=session, data={"name": "Dan", "api_key": "test"})
-                    logger.info("Тестовый пользователь успешно добавлен %s", user)
-                else:
-                    logger.info("Тестовый пользователь уже существует")
-            except Exception as e:
-                logger.error("Ошибка при добавлении тестового пользователя: %s", e)
-            finally:
-                logger.info("Закрытие сессии %s", session)
-                await session.close()
-                logger.info("Сессия закрыта")
-
+    async with AsyncSessionApp() as session:
+        await add_test_information(session)
     yield
 
     logger.info("Закрытие всех соединений и освобождение ресурсов б/д lifespan")
