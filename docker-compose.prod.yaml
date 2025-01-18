@@ -47,9 +47,11 @@ services:
     networks:
       - my_network
     volumes:
-      - ./init_db.sh:/docker-entrypoint-initdb.d/init_db.sh
-      - ./db/:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
 
 networks:
   my_network:
     driver: bridge
+
+volumes:
+    postgres_data:
