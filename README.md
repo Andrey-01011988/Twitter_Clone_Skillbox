@@ -25,7 +25,7 @@
 Для запуска проекта выполните следующую команду в терминале:
 
 ```bash
-docker-compose -f docker-compose.prod.yaml up 
+docker-compose -f docker-compose.prod.yaml up
 ```
 
 После завершения запуска приложение будет доступно по адресу:
