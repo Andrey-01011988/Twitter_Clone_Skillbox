@@ -92,58 +92,7 @@ Docker Compose — это инструмент для определения и 
 
 ---
 
-## 11. Команды, связанные с volumes
-
-### a) `docker volume ls`
-
-**Описание**: Показывает список всех созданных volumes на вашей системе.
-
----
-
-### b) `docker volume inspect <volume_name>`
-
-**Описание**: Выводит подробную информацию о конкретном volume, включая его параметры и путь хранения данных на хосте.
-
-**Примеры использования**:
-- `docker volume inspect test_db_data` — показывает информацию о volume с именем "test_db_data".
-
----
-
-### c) `docker volume rm <volume_name>`
-
-**Описание**: Удаляет указанный volume из системы. Этот volume должен быть неиспользуемым (т.е. не должен быть подключен ни к одному контейнеру).
-
----
-
-### d) `docker volume prune`
-
-**Описание**: Удаляет все неиспользуемые volumes из системы, освобождая место на диске.
-
----
-
-### e) Использование volumes в Docker Compose
-
-При использовании volumes в файле `docker-compose.yml`, вы можете определить их следующим образом:
-
-```yaml
-volumes:
-  my_volume_name:  # Определение именованного volume
-```
-
-Затем вы можете использовать этот volume в сервисах:
-
-```yaml
-services:
-  my_service:
-    volumes:
-      - my_volume_name:/path/in/container
-```
-
-Это позволяет обеспечить постоянное хранилище данных для ваших приложений.
-
----
-
-## 12. Дополнительные команды
+## 11. Дополнительные команды
 
 ### a) `docker-compose down -v --rmi all`
 
@@ -183,12 +132,15 @@ services:
 
 Эти команды являются основными инструментами для работы с Docker Compose и позволяют вам эффективно управлять многоконтейнерными приложениями. Убедитесь, что вы используете правильные команды в зависимости от ваших потребностей при разработке и развертывании приложений с использованием Docker Compose.
 
---- 
+---
+
 
 Citations:
- https://docs.docker.com/compose/
- https://docs.docker.com/engine/reference/commandline/volume/
- https://docs.docker.com/compose/compose-file/compose-file-v2/#volumes
- https://docs.docker.com/compose/reference/overview/
- https://stackoverflow.com/questions/46428420/docker-volume-prune-command-explained
- https://www.baeldung.com/docker-volumes
+[1] https://dockerlabs.collabnix.com/intermediate/workshop/DockerCompose/down_command.html
+[2] https://docs.docker.com/reference/cli/docker/compose/down/
+[3] https://www.geeksforgeeks.org/docker-compose-up-down-stop-start-difference/
+[4] https://www.warp.dev/terminus/docker-compose-down
+[5] https://ioflood.com/blog/docker-compose-down-guide-to-stopping-and-removing-docker-containers/
+[6] https://stackoverflow.com/questions/46428420/docker-compose-up-down-stop-start-difference
+[7] https://forums.docker.com/t/docker-compose-down-what-does-it-exactly-do/99054
+[8] https://spacelift.io/blog/docker-stop-container
