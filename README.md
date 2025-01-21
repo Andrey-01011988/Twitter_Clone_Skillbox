@@ -37,7 +37,7 @@ http://localhost/
 Для остановки контейнеров используйте:
 
 ```bash
- docker-compose -f docker-compose.prod.yaml down
+ docker-compose -f docker-compose.prod.yaml down 
 ```
 
 ## Используемые технологии
