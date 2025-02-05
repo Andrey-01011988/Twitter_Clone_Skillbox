@@ -19,7 +19,7 @@ WORKDIR /server
 # CMD ["sh", "-c", "pytest -v tests/; tail -f /dev/null"]
 
 # После прохождения тестов контейнер остановится
-CMD ["pytest", "-v", "tests/"]
+#CMD ["pytest", "-v", "tests/"]
 
 # Подробный вывод логирования при прохождении тестов
-# CMD ["pytest", "-v", "tests/", "--log-cli-level=INFO"]
+ CMD ["pytest", "-v", "tests/", "--log-cli-level=INFO"]
